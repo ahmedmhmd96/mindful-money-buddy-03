@@ -46,6 +46,8 @@ function Dashboard() {
   const listTxFn = useServerFn(listTransactions);
   const listRecFn = useServerFn(listRecurring);
   const adviceFn = useServerFn(getBudgetAdvice);
+  const settingsFn = useServerFn(getSettings);
+  const settingsQ = useQuery({ queryKey: ["settings"], queryFn: () => settingsFn({ data: undefined }) });
 
   const { start, end } = useMemo(() => monthRange(), []);
 
