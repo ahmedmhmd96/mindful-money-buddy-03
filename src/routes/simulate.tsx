@@ -210,6 +210,57 @@ function SimulatePage() {
     return { income, expense, net: income - expense, endBalance: forecast[forecast.length - 1]?.cumulative ?? 0 };
   }, [forecast]);
 
+  const explainFn = useServerFn(explainForecast);
+  const explainM = useMutation({
+    mutationFn: (payload: Parameters<typeof explainFn>[0]["data"]) => explainFn({ data: payload }),
+    onSuccess: (res) => {
+      if (!res.ok) toast.error(res.error);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  function runExplain() {
+    explainM.mutate({
+      forecast: forecast.map((r) => ({
+        label: r.label,
+        income: r.income,
+        expense: r.expense,
+        net: r.net,
+        cumulative: r.cumulative,
+        hasScenario: r.hasScenario,
+        partial: r.partial,
+      })),
+      scenario: {
+        startingBalance,
+        incomeMultiplier,
+        incomeAddend,
+        oneOffs: oneOffs.map((o) => ({
+          kind: o.kind,
+          name: o.name,
+          amount: o.amount,
+          monthLabel: monthOptions[o.monthOffset]?.label ?? `+${o.monthOffset}mo`,
+        })),
+        disabledRecurring: recurring
+          .filter((r) => recOverrides[r.id]?.disabled)
+          .map((r) => r.name),
+        overriddenRecurring: recurring
+          .filter((r) => recOverrides[r.id]?.amount !== undefined)
+          .map((r) => ({
+            name: r.name,
+            from: Number(r.amount),
+            to: Number(recOverrides[r.id]!.amount),
+          })),
+        newRecurring: newRecurring.map((nr) => ({
+          kind: nr.kind,
+          name: nr.name,
+          monthlyAmount: nr.monthlyAmount,
+          startLabel: monthOptions[nr.startOffset]?.label ?? `+${nr.startOffset}mo`,
+          endLabel: nr.endOffset != null ? monthOptions[nr.endOffset]?.label ?? `+${nr.endOffset}mo` : null,
+        })),
+      },
+    });
+  }
+
   function addOneOff() {
     setOneOffs((p) => [
       ...p,
