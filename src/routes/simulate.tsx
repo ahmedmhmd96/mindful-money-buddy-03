@@ -28,7 +28,7 @@ import {
   listRecurring,
   listTransactions,
 } from "@/lib/budget.functions";
-import { explainForecast } from "@/lib/simulate.functions";
+import { explainForecast, type ExplainInput } from "@/lib/simulate.functions";
 import { formatEGP, monthRange } from "@/lib/format";
 
 export const Route = createFileRoute("/simulate")({
