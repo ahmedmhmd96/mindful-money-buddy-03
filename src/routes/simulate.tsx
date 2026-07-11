@@ -1,7 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import { toast } from "sonner";
 import {
   Line,
   LineChart,
@@ -19,13 +21,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2, Plus, RotateCcw, Info } from "lucide-react";
+import { Trash2, Plus, RotateCcw, Info, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   listCategories,
   listRecurring,
   listTransactions,
 } from "@/lib/budget.functions";
+import { explainForecast } from "@/lib/simulate.functions";
 import { formatEGP, monthRange } from "@/lib/format";
 
 export const Route = createFileRoute("/simulate")({
