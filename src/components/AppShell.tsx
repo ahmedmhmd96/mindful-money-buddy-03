@@ -22,6 +22,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     { to: "/budget", label: "Budget", Icon: Target },
     { to: "/goals", label: "Goals", Icon: Trophy },
     { to: "/advice", label: "AI Advice", Icon: Sparkles },
+    { to: "/settings", label: "Settings", Icon: Settings },
   ] as const;
 
   return (
