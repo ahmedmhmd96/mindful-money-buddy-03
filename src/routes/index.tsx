@@ -73,6 +73,8 @@ function Dashboard() {
     queryFn: () => listTxFn({ data: { limit: 8 } }),
   });
   const recQ = useQuery({ queryKey: ["recurring"], queryFn: () => listRecFn({ data: undefined }) });
+  const listGoalsFn = useServerFn(listGoals);
+  const goalsQ = useQuery({ queryKey: ["goals"], queryFn: () => listGoalsFn({ data: undefined }) });
 
   const advice = useMutation({
     mutationFn: () => adviceFn({ data: undefined }),
