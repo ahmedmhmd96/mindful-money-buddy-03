@@ -27,7 +27,7 @@ export type ExplainInput = { forecast: ForecastRow[]; scenario: ExplainScenario 
 
 export const explainForecast = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => input as { forecast: ForecastRow[]; scenario: ScenarioSummary })
+  .inputValidator((input: unknown) => input as ExplainInput)
   .handler(async ({ data }) => {
     const key = process.env.LOVABLE_API_KEY;
     if (!key) throw new Error("Missing LOVABLE_API_KEY");
