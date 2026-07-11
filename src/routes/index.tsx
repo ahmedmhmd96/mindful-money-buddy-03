@@ -17,6 +17,7 @@ import {
   runRecurring,
 } from "@/lib/budget.functions";
 import { getBudgetAdvice } from "@/lib/advice.functions";
+import { listGoals } from "@/lib/goals.functions";
 import { cycleInfo, formatEGP, monthRange } from "@/lib/format";
 
 export const Route = createFileRoute("/")({
