@@ -91,6 +91,7 @@ function Dashboard() {
   let spendRecurringActual = 0;
   let incomeRecurringActual = 0;
   const perCat = new Map<string, number>();
+  const perCatRecurringActual = new Map<string, number>();
   const incomeBySource = new Map<string, number>();
   for (const t of tx) {
     const amt = Number(t.amount);
@@ -101,7 +102,15 @@ function Dashboard() {
       if (isRecurringTx(t.note)) incomeRecurringActual += amt;
     } else {
       spendActual += amt;
-      if (t.category_id) perCat.set(t.category_id, (perCat.get(t.category_id) ?? 0) + amt);
+      if (t.category_id) {
+        perCat.set(t.category_id, (perCat.get(t.category_id) ?? 0) + amt);
+        if (isRecurringTx(t.note)) {
+          perCatRecurringActual.set(
+            t.category_id,
+            (perCatRecurringActual.get(t.category_id) ?? 0) + amt,
+          );
+        }
+      }
       if (isRecurringTx(t.note)) spendRecurringActual += amt;
     }
   }
@@ -122,6 +131,16 @@ function Dashboard() {
   const expectedRecurringIncome = expectedRecurring
     .filter((r) => r.kind === "income")
     .reduce((s, r) => s + r.monthlyAmt, 0);
+
+  // Expected recurring expense per category (full-month projection)
+  const expectedRecurringPerCat = new Map<string, number>();
+  for (const r of expectedRecurring) {
+    if (r.kind !== "expense" || !r.category_id) continue;
+    expectedRecurringPerCat.set(
+      r.category_id,
+      (expectedRecurringPerCat.get(r.category_id) ?? 0) + r.monthlyAmt,
+    );
+  }
 
   // Projected totals: actual one-offs + full expected recurring
   const projectedIncome = (incomeActual - incomeRecurringActual) + expectedRecurringIncome;
@@ -180,10 +199,13 @@ function Dashboard() {
               <p className="text-sm text-muted-foreground">No categories yet.</p>
             )}
             {cats.map((c) => {
-              const s = perCat.get(c.id) ?? 0;
+              const actual = perCat.get(c.id) ?? 0;
+              const recActual = perCatRecurringActual.get(c.id) ?? 0;
+              const recExpected = expectedRecurringPerCat.get(c.id) ?? 0;
+              const projected = actual - recActual + recExpected;
               const lim = Number(c.monthly_limit);
-              const pct = lim > 0 ? Math.min(100, Math.round((s / lim) * 100)) : 0;
-              const over = lim > 0 && s > lim;
+              const pct = lim > 0 ? Math.min(100, Math.round((projected / lim) * 100)) : 0;
+              const over = lim > 0 && projected > lim;
               return (
                 <div key={c.id}>
                   <div className="mb-1 flex items-center justify-between text-sm">
@@ -195,10 +217,15 @@ function Dashboard() {
                       {c.name}
                     </span>
                     <span className={over ? "text-rose-600" : "text-muted-foreground"}>
-                      {formatEGP(s)}
+                      {formatEGP(projected)}
                       {lim > 0 && <> / {formatEGP(lim)}</>}
                     </span>
                   </div>
+                  {recExpected > 0 && (
+                    <div className="mb-1 text-xs text-muted-foreground">
+                      Actual {formatEGP(actual)} · Recurring {formatEGP(recExpected)}
+                    </div>
+                  )}
                   {lim > 0 && <Progress value={pct} />}
                 </div>
               );
