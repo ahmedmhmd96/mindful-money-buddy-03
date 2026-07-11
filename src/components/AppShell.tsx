@@ -3,7 +3,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
-import { Wallet, LayoutDashboard, ListPlus, Target, Trophy, Sparkles, LogOut } from "lucide-react";
+import { Wallet, LayoutDashboard, ListPlus, Target, Trophy, Sparkles, Settings, LogOut } from "lucide-react";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const qc = useQueryClient();
