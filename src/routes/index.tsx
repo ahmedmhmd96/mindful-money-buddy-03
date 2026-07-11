@@ -10,13 +10,14 @@ import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
 import ReactMarkdown from "react-markdown";
 import {
+  getSettings,
   listCategories,
   listRecurring,
   listTransactions,
   runRecurring,
 } from "@/lib/budget.functions";
 import { getBudgetAdvice } from "@/lib/advice.functions";
-import { formatEGP, monthRange } from "@/lib/format";
+import { cycleInfo, formatEGP, monthRange } from "@/lib/format";
 
 export const Route = createFileRoute("/")({
   head: () => ({ meta: [{ title: "Dashboard — My Budget" }] }),
