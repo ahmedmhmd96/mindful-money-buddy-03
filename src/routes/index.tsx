@@ -143,7 +143,7 @@ function Dashboard() {
         <p className="text-sm text-muted-foreground">This month's summary in EGP.</p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           label="Income"
           value={formatEGP(projectedIncome)}
@@ -161,6 +161,12 @@ function Dashboard() {
           value={formatEGP(projectedNet)}
           tone={projectedNet >= 0 ? "text-emerald-600" : "text-rose-600"}
           sub={`Posted so far ${formatEGP(incomeActual - spendActual)}`}
+        />
+        <StatCard
+          label={`Daily limit (until ${cycleEndLabel})`}
+          value={formatEGP(dailyLimit)}
+          tone={dailyLimit >= 0 ? "text-primary" : "text-rose-600"}
+          sub={`${daysLeft} day${daysLeft === 1 ? "" : "s"} left · cycle end day ${cycleEndDay}`}
         />
       </div>
 
