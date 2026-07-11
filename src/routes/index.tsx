@@ -188,26 +188,28 @@ function Dashboard() {
         />
         <StatCard
           label={`Daily limit (until ${cycleEndLabel})`}
-          value={formatEGP(savingsTarget > 0 ? dailyLimitWithGoal : dailyLimit)}
-          tone={(savingsTarget > 0 ? dailyLimitWithGoal : dailyLimit) >= 0 ? "text-primary" : "text-rose-600"}
+          value={formatEGP(dailyLimit)}
+          tone={dailyLimit >= 0 ? "text-primary" : "text-rose-600"}
           sub={
             <>
-              {savingsTarget > 0 ? (
-                <>
-                  Spend up to {formatEGP(dailyLimitWithGoal)}/day to save{" "}
-                  {formatEGP(savingsTarget)} ·{" "}
-                </>
-              ) : (
-                <>
-                  {daysLeft} day{daysLeft === 1 ? "" : "s"} left ·{" "}
-                </>
-              )}
+              {daysLeft} day{daysLeft === 1 ? "" : "s"} left ·{" "}
               <Link to="/budget" className="text-primary hover:underline">
                 cycle end day {cycleEndDay}
               </Link>
+              {savingsTarget > 0 && (
+                <>
+                  <br />
+                  Spend up to{" "}
+                  <span className={dailyLimitWithGoal >= 0 ? "text-emerald-600" : "text-rose-600"}>
+                    {formatEGP(dailyLimitWithGoal)}/day
+                  </span>{" "}
+                  to save {formatEGP(savingsTarget)}
+                </>
+              )}
             </>
           }
         />
+
       </div>
 
 
