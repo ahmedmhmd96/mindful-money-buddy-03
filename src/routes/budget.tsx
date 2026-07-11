@@ -131,6 +131,46 @@ function BudgetPage() {
     <AppShell>
       <h1 className="mb-4 text-2xl font-semibold">Budget</h1>
 
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Cycle settings</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form
+            className="flex flex-wrap items-end gap-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const n = Number(cycleDayInput || currentCycleDay);
+              if (!Number.isInteger(n) || n < 1 || n > 31) {
+                toast.error("Enter a day between 1 and 31");
+                return;
+              }
+              saveSettingsM.mutate(n);
+            }}
+          >
+            <div className="space-y-1.5">
+              <Label>End of month (day)</Label>
+              <Input
+                type="number"
+                min={1}
+                max={31}
+                className="w-32"
+                placeholder={String(currentCycleDay)}
+                value={cycleDayInput}
+                onChange={(e) => setCycleDayInput(e.target.value)}
+              />
+            </div>
+            <Button type="submit" disabled={saveSettingsM.isPending}>
+              Save
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              Current: day {currentCycleDay}. The dashboard divides projected net by the days left
+              until this day to compute your daily spending limit.
+            </p>
+          </form>
+        </CardContent>
+      </Card>
+
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
