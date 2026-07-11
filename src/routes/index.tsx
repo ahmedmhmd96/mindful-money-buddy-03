@@ -91,6 +91,7 @@ function Dashboard() {
   let spendRecurringActual = 0;
   let incomeRecurringActual = 0;
   const perCat = new Map<string, number>();
+  const perCatRecurringActual = new Map<string, number>();
   const incomeBySource = new Map<string, number>();
   for (const t of tx) {
     const amt = Number(t.amount);
@@ -101,7 +102,15 @@ function Dashboard() {
       if (isRecurringTx(t.note)) incomeRecurringActual += amt;
     } else {
       spendActual += amt;
-      if (t.category_id) perCat.set(t.category_id, (perCat.get(t.category_id) ?? 0) + amt);
+      if (t.category_id) {
+        perCat.set(t.category_id, (perCat.get(t.category_id) ?? 0) + amt);
+        if (isRecurringTx(t.note)) {
+          perCatRecurringActual.set(
+            t.category_id,
+            (perCatRecurringActual.get(t.category_id) ?? 0) + amt,
+          );
+        }
+      }
       if (isRecurringTx(t.note)) spendRecurringActual += amt;
     }
   }
@@ -122,6 +131,16 @@ function Dashboard() {
   const expectedRecurringIncome = expectedRecurring
     .filter((r) => r.kind === "income")
     .reduce((s, r) => s + r.monthlyAmt, 0);
+
+  // Expected recurring expense per category (full-month projection)
+  const expectedRecurringPerCat = new Map<string, number>();
+  for (const r of expectedRecurring) {
+    if (r.kind !== "expense" || !r.category_id) continue;
+    expectedRecurringPerCat.set(
+      r.category_id,
+      (expectedRecurringPerCat.get(r.category_id) ?? 0) + r.monthlyAmt,
+    );
+  }
 
   // Projected totals: actual one-offs + full expected recurring
   const projectedIncome = (incomeActual - incomeRecurringActual) + expectedRecurringIncome;
