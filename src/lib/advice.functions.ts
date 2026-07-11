@@ -2,17 +2,17 @@ import { createServerFn } from "@tanstack/react-start";
 import { generateText } from "ai";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createLovableAiGatewayProvider } from "./ai-gateway.server";
-import { daysLeftInMonth, monthRange } from "./format";
+import { cycleInfo, monthRange } from "./format";
 
 export const getBudgetAdvice = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const key = process.env.LOVABLE_API_KEY;
     if (!key) throw new Error("Missing LOVABLE_API_KEY");
-    const { supabase } = context;
+    const { supabase, userId } = context;
     const { start, end } = monthRange();
 
-    const [{ data: cats }, { data: txs }, { data: rec }] = await Promise.all([
+    const [{ data: cats }, { data: txs }, { data: rec }, { data: settings }] = await Promise.all([
       supabase.from("categories").select("id, name, monthly_limit"),
       supabase
         .from("transactions")
@@ -20,6 +20,7 @@ export const getBudgetAdvice = createServerFn({ method: "POST" })
         .gte("occurred_on", start)
         .lt("occurred_on", end),
       supabase.from("recurring_items").select("kind, amount, name, frequency").eq("active", true),
+      supabase.from("user_settings").select("cycle_end_day").eq("user_id", userId).maybeSingle(),
     ]);
 
     const catMap = new Map((cats ?? []).map((c) => [c.id, c]));
@@ -48,7 +49,9 @@ export const getBudgetAdvice = createServerFn({ method: "POST" })
       .map((r) => `- ${r.name}: ${r.kind} ${Number(r.amount).toFixed(2)} EGP ${r.frequency}`)
       .join("\n");
 
-    const daysLeft = daysLeftInMonth();
+    const cycleEndDay = settings?.cycle_end_day ?? 31;
+    const { cycleEnd, daysLeft } = cycleInfo(cycleEndDay);
+    const cycleEndLabel = cycleEnd.toISOString().slice(0, 10);
 
     const prompt = `You are a personal budgeting coach. All amounts are in Egyptian Pounds (EGP).
 
@@ -56,7 +59,8 @@ Current month summary:
 - Total income so far: ${income.toFixed(2)} EGP
 - Total spending so far: ${spend.toFixed(2)} EGP
 - Net: ${(income - spend).toFixed(2)} EGP
-- Days left in month: ${daysLeft}
+- Budget cycle ends: ${cycleEndLabel} (day ${cycleEndDay} of the month)
+- Days left in cycle: ${daysLeft}
 
 Category spending vs. monthly limits:
 ${categoryLines || "(no categories yet)"}
