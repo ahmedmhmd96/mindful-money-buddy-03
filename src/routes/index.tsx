@@ -11,6 +11,7 @@ import { Link } from "@tanstack/react-router";
 import ReactMarkdown from "react-markdown";
 import {
   listCategories,
+  listRecurring,
   listTransactions,
   runRecurring,
 } from "@/lib/budget.functions";
@@ -22,23 +23,40 @@ export const Route = createFileRoute("/")({
   component: Dashboard,
 });
 
+function weeklyOccurrencesThisMonth(dayOfWeek: number, d = new Date()): number {
+  const year = d.getFullYear();
+  const month = d.getMonth();
+  const lastDay = new Date(year, month + 1, 0).getDate();
+  let count = 0;
+  for (let day = 1; day <= lastDay; day++) {
+    if (new Date(year, month, day).getDay() === dayOfWeek) count++;
+  }
+  return count;
+}
+
+function isRecurringTx(note: string | null | undefined): boolean {
+  return !!note && note.startsWith("Recurring:");
+}
+
 function Dashboard() {
   const qc = useQueryClient();
   const run = useServerFn(runRecurring);
   const listCatsFn = useServerFn(listCategories);
   const listTxFn = useServerFn(listTransactions);
+  const listRecFn = useServerFn(listRecurring);
   const adviceFn = useServerFn(getBudgetAdvice);
 
   const { start, end } = useMemo(() => monthRange(), []);
 
-  // Run recurring on mount, then invalidate transactions
   useEffect(() => {
-    run({ data: undefined }).then((res) => {
-      if (res.generated > 0) {
-        toast.success(`Added ${res.generated} recurring transaction(s).`);
-        qc.invalidateQueries({ queryKey: ["transactions"] });
-      }
-    }).catch(() => {});
+    run({ data: undefined })
+      .then((res) => {
+        if (res.generated > 0) {
+          toast.success(`Added ${res.generated} recurring transaction(s).`);
+          qc.invalidateQueries({ queryKey: ["transactions"] });
+        }
+      })
+      .catch(() => {});
   }, [run, qc]);
 
   const catsQ = useQuery({ queryKey: ["categories"], queryFn: () => listCatsFn({ data: undefined }) });
@@ -50,6 +68,7 @@ function Dashboard() {
     queryKey: ["transactions", "recent"],
     queryFn: () => listTxFn({ data: { limit: 8 } }),
   });
+  const recQ = useQuery({ queryKey: ["recurring"], queryFn: () => listRecFn({ data: undefined }) });
 
   const advice = useMutation({
     mutationFn: () => adviceFn({ data: undefined }),
@@ -61,19 +80,50 @@ function Dashboard() {
 
   const cats = catsQ.data ?? [];
   const tx = txQ.data ?? [];
+  const recurring = (recQ.data ?? []).filter((r) => r.active);
 
-  let income = 0;
-  let spend = 0;
+  // Actual (posted) tallies this month
+  let incomeActual = 0;
+  let spendActual = 0;
+  let spendRecurringActual = 0;
+  let incomeRecurringActual = 0;
   const perCat = new Map<string, number>();
+  const incomeBySource = new Map<string, number>();
   for (const t of tx) {
     const amt = Number(t.amount);
-    if (t.kind === "income") income += amt;
-    else {
-      spend += amt;
+    if (t.kind === "income") {
+      incomeActual += amt;
+      const src = t.source ?? "Income";
+      incomeBySource.set(src, (incomeBySource.get(src) ?? 0) + amt);
+      if (isRecurringTx(t.note)) incomeRecurringActual += amt;
+    } else {
+      spendActual += amt;
       if (t.category_id) perCat.set(t.category_id, (perCat.get(t.category_id) ?? 0) + amt);
+      if (isRecurringTx(t.note)) spendRecurringActual += amt;
     }
   }
-  const net = income - spend;
+  const oneOffSpend = spendActual - spendRecurringActual;
+
+  // Expected monthly totals from recurring items (full-month projection)
+  const expectedRecurring = recurring.map((r) => {
+    const amt = Number(r.amount);
+    const monthlyAmt =
+      r.frequency === "monthly"
+        ? amt
+        : amt * weeklyOccurrencesThisMonth(r.day_of_week ?? 1);
+    return { ...r, monthlyAmt };
+  });
+  const expectedRecurringExpense = expectedRecurring
+    .filter((r) => r.kind === "expense")
+    .reduce((s, r) => s + r.monthlyAmt, 0);
+  const expectedRecurringIncome = expectedRecurring
+    .filter((r) => r.kind === "income")
+    .reduce((s, r) => s + r.monthlyAmt, 0);
+
+  // Projected totals: actual one-offs + full expected recurring
+  const projectedIncome = (incomeActual - incomeRecurringActual) + expectedRecurringIncome;
+  const projectedSpend = oneOffSpend + expectedRecurringExpense;
+  const projectedNet = projectedIncome - projectedSpend;
 
   return (
     <AppShell>
@@ -83,12 +133,23 @@ function Dashboard() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard label="Income" value={formatEGP(income)} tone="text-emerald-600" />
-        <StatCard label="Spending" value={formatEGP(spend)} tone="text-rose-600" />
         <StatCard
-          label="Net"
-          value={formatEGP(net)}
-          tone={net >= 0 ? "text-emerald-600" : "text-rose-600"}
+          label="Income"
+          value={formatEGP(projectedIncome)}
+          tone="text-emerald-600"
+          sub={`Actual ${formatEGP(incomeActual)} · Recurring ${formatEGP(expectedRecurringIncome)}`}
+        />
+        <StatCard
+          label="Spending"
+          value={formatEGP(projectedSpend)}
+          tone="text-rose-600"
+          sub={`One-off ${formatEGP(oneOffSpend)} · Recurring ${formatEGP(expectedRecurringExpense)}`}
+        />
+        <StatCard
+          label="Projected Net"
+          value={formatEGP(projectedNet)}
+          tone={projectedNet >= 0 ? "text-emerald-600" : "text-rose-600"}
+          sub={`Posted so far ${formatEGP(incomeActual - spendActual)}`}
         />
       </div>
 
@@ -132,13 +193,93 @@ function Dashboard() {
         </Card>
 
         <Card>
+          <CardHeader>
+            <CardTitle>Recurring commitments (this month)</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {expectedRecurring.length === 0 && (
+              <p className="text-sm text-muted-foreground">
+                No recurring items yet.{" "}
+                <Link to="/budget" className="text-primary hover:underline">
+                  Add one →
+                </Link>
+              </p>
+            )}
+            {expectedRecurring.length > 0 && (
+              <>
+                <ul className="divide-y">
+                  {expectedRecurring.map((r) => (
+                    <li key={r.id} className="flex items-center justify-between py-2 text-sm">
+                      <div>
+                        <div className="font-medium">{r.name}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {r.kind === "income" ? "Income" : "Expense"} ·{" "}
+                          {r.frequency === "monthly"
+                            ? `Monthly (day ${r.day_of_month ?? 1})`
+                            : `Weekly × ${weeklyOccurrencesThisMonth(r.day_of_week ?? 1)}`}
+                        </div>
+                      </div>
+                      <div className={r.kind === "income" ? "text-emerald-600" : "text-rose-600"}>
+                        {r.kind === "income" ? "+" : "−"}
+                        {formatEGP(r.monthlyAmt)}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+                <div className="flex items-center justify-between border-t pt-3 text-sm font-medium">
+                  <span>Net recurring</span>
+                  <span
+                    className={
+                      expectedRecurringIncome - expectedRecurringExpense >= 0
+                        ? "text-emerald-600"
+                        : "text-rose-600"
+                    }
+                  >
+                    {formatEGP(expectedRecurringIncome - expectedRecurringExpense)}
+                  </span>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="mt-6 grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Income this month</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {incomeBySource.size === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No income posted yet.{" "}
+                <Link to="/transactions" className="text-primary hover:underline">
+                  Add income →
+                </Link>
+              </p>
+            ) : (
+              <ul className="divide-y">
+                {[...incomeBySource.entries()]
+                  .sort((a, b) => b[1] - a[1])
+                  .map(([src, amt]) => (
+                    <li key={src} className="flex items-center justify-between py-2 text-sm">
+                      <span>{src}</span>
+                      <span className="text-emerald-600">+{formatEGP(amt)}</span>
+                    </li>
+                  ))}
+                <li className="flex items-center justify-between border-t py-2 pt-3 text-sm font-medium">
+                  <span>Total</span>
+                  <span className="text-emerald-600">+{formatEGP(incomeActual)}</span>
+                </li>
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>AI budgeting advice</CardTitle>
-            <Button
-              size="sm"
-              onClick={() => advice.mutate()}
-              disabled={advice.isPending}
-            >
+            <Button size="sm" onClick={() => advice.mutate()} disabled={advice.isPending}>
               {advice.isPending ? "Thinking…" : "Get advice"}
             </Button>
           </CardHeader>
@@ -199,12 +340,23 @@ function Dashboard() {
   );
 }
 
-function StatCard({ label, value, tone }: { label: string; value: string; tone: string }) {
+function StatCard({
+  label,
+  value,
+  tone,
+  sub,
+}: {
+  label: string;
+  value: string;
+  tone: string;
+  sub?: string;
+}) {
   return (
     <Card>
       <CardContent className="pt-6">
         <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
         <div className={`mt-1 text-2xl font-semibold ${tone}`}>{value}</div>
+        {sub && <div className="mt-1 text-xs text-muted-foreground">{sub}</div>}
       </CardContent>
     </Card>
   );
