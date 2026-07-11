@@ -21,8 +21,10 @@ import { toast } from "sonner";
 import {
   deleteCategory,
   deleteRecurring,
+  getSettings,
   listCategories,
   listRecurring,
+  updateSettings,
   upsertCategory,
   upsertRecurring,
 } from "@/lib/budget.functions";
@@ -43,6 +45,20 @@ function BudgetPage() {
   const delCat = useServerFn(deleteCategory);
   const saveRec = useServerFn(upsertRecurring);
   const delRec = useServerFn(deleteRecurring);
+  const settingsFn = useServerFn(getSettings);
+  const saveSettings = useServerFn(updateSettings);
+
+  const settingsQ = useQuery({ queryKey: ["settings"], queryFn: () => settingsFn({ data: undefined }) });
+  const saveSettingsM = useMutation({
+    mutationFn: (cycle_end_day: number) => saveSettings({ data: { cycle_end_day } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["settings"] });
+      toast.success("Cycle end day saved");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const [cycleDayInput, setCycleDayInput] = useState<string>("");
+  const currentCycleDay = settingsQ.data?.cycle_end_day ?? 31;
 
   const catsQ = useQuery({ queryKey: ["categories"], queryFn: () => catsFn({ data: undefined }) });
   const recQ = useQuery({ queryKey: ["recurring"], queryFn: () => recFn({ data: undefined }) });
@@ -114,6 +130,46 @@ function BudgetPage() {
   return (
     <AppShell>
       <h1 className="mb-4 text-2xl font-semibold">Budget</h1>
+
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Cycle settings</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form
+            className="flex flex-wrap items-end gap-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const n = Number(cycleDayInput || currentCycleDay);
+              if (!Number.isInteger(n) || n < 1 || n > 31) {
+                toast.error("Enter a day between 1 and 31");
+                return;
+              }
+              saveSettingsM.mutate(n);
+            }}
+          >
+            <div className="space-y-1.5">
+              <Label>End of month (day)</Label>
+              <Input
+                type="number"
+                min={1}
+                max={31}
+                className="w-32"
+                placeholder={String(currentCycleDay)}
+                value={cycleDayInput}
+                onChange={(e) => setCycleDayInput(e.target.value)}
+              />
+            </div>
+            <Button type="submit" disabled={saveSettingsM.isPending}>
+              Save
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              Current: day {currentCycleDay}. The dashboard divides projected net by the days left
+              until this day to compute your daily spending limit.
+            </p>
+          </form>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>

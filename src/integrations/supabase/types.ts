@@ -138,6 +138,24 @@ export type Database = {
           },
         ]
       }
+      user_settings: {
+        Row: {
+          cycle_end_day: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cycle_end_day?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cycle_end_day?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

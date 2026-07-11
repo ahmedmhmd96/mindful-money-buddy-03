@@ -10,13 +10,14 @@ import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
 import ReactMarkdown from "react-markdown";
 import {
+  getSettings,
   listCategories,
   listRecurring,
   listTransactions,
   runRecurring,
 } from "@/lib/budget.functions";
 import { getBudgetAdvice } from "@/lib/advice.functions";
-import { formatEGP, monthRange } from "@/lib/format";
+import { cycleInfo, formatEGP, monthRange } from "@/lib/format";
 
 export const Route = createFileRoute("/")({
   head: () => ({ meta: [{ title: "Dashboard — My Budget" }] }),
@@ -45,6 +46,8 @@ function Dashboard() {
   const listTxFn = useServerFn(listTransactions);
   const listRecFn = useServerFn(listRecurring);
   const adviceFn = useServerFn(getBudgetAdvice);
+  const settingsFn = useServerFn(getSettings);
+  const settingsQ = useQuery({ queryKey: ["settings"], queryFn: () => settingsFn({ data: undefined }) });
 
   const { start, end } = useMemo(() => monthRange(), []);
 
@@ -125,6 +128,14 @@ function Dashboard() {
   const projectedSpend = oneOffSpend + expectedRecurringExpense;
   const projectedNet = projectedIncome - projectedSpend;
 
+  // Daily spending limit derived from projected net over the remaining days of the cycle
+  const cycleEndDay = settingsQ.data?.cycle_end_day ?? 31;
+  const { cycleEnd, daysLeft } = cycleInfo(cycleEndDay);
+  // Remaining budget = projected net minus what is still expected to be spent (recurring not yet posted + one-offs already recorded stay put).
+  // Simpler + intuitive: divide projected net over remaining days.
+  const dailyLimit = projectedNet / daysLeft;
+  const cycleEndLabel = cycleEnd.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+
   return (
     <AppShell>
       <div className="mb-6">
@@ -132,7 +143,7 @@ function Dashboard() {
         <p className="text-sm text-muted-foreground">This month's summary in EGP.</p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           label="Income"
           value={formatEGP(projectedIncome)}
@@ -150,6 +161,12 @@ function Dashboard() {
           value={formatEGP(projectedNet)}
           tone={projectedNet >= 0 ? "text-emerald-600" : "text-rose-600"}
           sub={`Posted so far ${formatEGP(incomeActual - spendActual)}`}
+        />
+        <StatCard
+          label={`Daily limit (until ${cycleEndLabel})`}
+          value={formatEGP(dailyLimit)}
+          tone={dailyLimit >= 0 ? "text-primary" : "text-rose-600"}
+          sub={`${daysLeft} day${daysLeft === 1 ? "" : "s"} left · cycle end day ${cycleEndDay}`}
         />
       </div>
 

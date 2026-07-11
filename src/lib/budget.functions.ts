@@ -2,6 +2,38 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 
+// ---------- Settings ----------
+
+export const getSettings = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+    const { data } = await supabase
+      .from("user_settings")
+      .select("cycle_end_day")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (!data) {
+      await supabase.from("user_settings").insert({ user_id: userId, cycle_end_day: 31 });
+      return { cycle_end_day: 31 };
+    }
+    return { cycle_end_day: data.cycle_end_day };
+  });
+
+export const updateSettings = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { cycle_end_day: number }) =>
+    z.object({ cycle_end_day: z.number().int().min(1).max(31) }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { error } = await supabase
+      .from("user_settings")
+      .upsert({ user_id: userId, cycle_end_day: data.cycle_end_day, updated_at: new Date().toISOString() });
+    if (error) throw error;
+    return { ok: true };
+  });
+
 const DEFAULT_CATEGORIES = [
   { name: "Food", color: "#f97316" },
   { name: "Transport", color: "#3b82f6" },
