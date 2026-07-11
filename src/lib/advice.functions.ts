@@ -9,10 +9,10 @@ export const getBudgetAdvice = createServerFn({ method: "POST" })
   .handler(async ({ context }) => {
     const key = process.env.LOVABLE_API_KEY;
     if (!key) throw new Error("Missing LOVABLE_API_KEY");
-    const { supabase } = context;
+    const { supabase, userId } = context;
     const { start, end } = monthRange();
 
-    const [{ data: cats }, { data: txs }, { data: rec }] = await Promise.all([
+    const [{ data: cats }, { data: txs }, { data: rec }, { data: settings }] = await Promise.all([
       supabase.from("categories").select("id, name, monthly_limit"),
       supabase
         .from("transactions")
@@ -20,6 +20,7 @@ export const getBudgetAdvice = createServerFn({ method: "POST" })
         .gte("occurred_on", start)
         .lt("occurred_on", end),
       supabase.from("recurring_items").select("kind, amount, name, frequency").eq("active", true),
+      supabase.from("user_settings").select("cycle_end_day").eq("user_id", userId).maybeSingle(),
     ]);
 
     const catMap = new Map((cats ?? []).map((c) => [c.id, c]));
