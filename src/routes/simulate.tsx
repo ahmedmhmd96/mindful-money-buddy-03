@@ -630,3 +630,55 @@ function StatCard({
     </Card>
   );
 }
+
+function NumberInput({
+  value,
+  onChange,
+  placeholder,
+  allowEmpty = true,
+  emptyValue = 0,
+}: {
+  value: number;
+  onChange: (n: number) => void;
+  placeholder?: string;
+  allowEmpty?: boolean;
+  emptyValue?: number;
+}) {
+  const [text, setText] = useState<string>(value === 0 && allowEmpty ? "" : String(value));
+
+  // Sync when parent resets/changes value externally
+  useEffect(() => {
+    const parsed = text === "" ? emptyValue : Number(text);
+    if (!Number.isNaN(parsed) && parsed === value) return;
+    setText(value === 0 && allowEmpty ? "" : String(value));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+
+  return (
+    <Input
+      type="text"
+      inputMode="decimal"
+      placeholder={placeholder}
+      value={text}
+      onFocus={(e) => e.currentTarget.select()}
+      onChange={(e) => {
+        const raw = e.target.value;
+        // allow empty, digits, one dot, optional leading minus
+        if (raw !== "" && !/^-?\d*\.?\d*$/.test(raw)) return;
+        setText(raw);
+        if (raw === "" || raw === "-" || raw === "." || raw === "-.") {
+          onChange(emptyValue);
+        } else {
+          const n = Number(raw);
+          if (!Number.isNaN(n)) onChange(n);
+        }
+      }}
+      onBlur={() => {
+        if (text === "" || text === "-" || text === "." || text === "-.") {
+          if (!allowEmpty) setText(String(emptyValue));
+        }
+      }}
+    />
+  );
+}
+
