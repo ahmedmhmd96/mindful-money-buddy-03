@@ -61,19 +61,23 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "My Budget — Track spending in EGP" },
+      { title: "Dashboard — My Budget" },
       {
         name: "description",
         content:
           "Personal budgeting app in Egyptian Pounds. Track daily spending, set category limits, manage recurring expenses, and get AI-powered budgeting advice.",
       },
-      { property: "og:title", content: "My Budget — Track spending in EGP" },
+      { property: "og:title", content: "Dashboard — My Budget" },
       {
         property: "og:description",
-        content: "Track daily spending, set limits, and get AI budgeting advice — all in EGP.",
+        content: "Personal budgeting app in Egyptian Pounds. Track daily spending, set category limits, manage recurring expenses, and get AI-powered budgeting advice.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Dashboard — My Budget" },
+      { name: "twitter:description", content: "Personal budgeting app in Egyptian Pounds. Track daily spending, set category limits, manage recurring expenses, and get AI-powered budgeting advice." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/7e346189-e522-482c-b0da-191d5ba6d4de/id-preview-e2e2fc0c--0912745d-a328-42fe-9f96-20fa2a425498.lovable.app-1783777546972.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/7e346189-e522-482c-b0da-191d5ba6d4de/id-preview-e2e2fc0c--0912745d-a328-42fe-9f96-20fa2a425498.lovable.app-1783777546972.png" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
