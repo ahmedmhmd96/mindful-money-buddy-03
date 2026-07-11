@@ -185,7 +185,14 @@ function Dashboard() {
           label={`Daily limit (until ${cycleEndLabel})`}
           value={formatEGP(dailyLimit)}
           tone={dailyLimit >= 0 ? "text-primary" : "text-rose-600"}
-          sub={`${daysLeft} day${daysLeft === 1 ? "" : "s"} left · cycle end day ${cycleEndDay}`}
+          sub={
+            <>
+              {daysLeft} day{daysLeft === 1 ? "" : "s"} left ·{" "}
+              <Link to="/budget" className="text-primary hover:underline">
+                cycle end day {cycleEndDay}
+              </Link>
+            </>
+          }
         />
       </div>
 
