@@ -1,7 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import { toast } from "sonner";
 import {
   Line,
   LineChart,
@@ -19,13 +21,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2, Plus, RotateCcw, Info } from "lucide-react";
+import { Trash2, Plus, RotateCcw, Info, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   listCategories,
   listRecurring,
   listTransactions,
 } from "@/lib/budget.functions";
+import { explainForecast, type ExplainInput } from "@/lib/simulate.functions";
 import { formatEGP, monthRange } from "@/lib/format";
 
 export const Route = createFileRoute("/simulate")({
@@ -206,6 +209,57 @@ function SimulatePage() {
     const expense = forecast.reduce((s, r) => s + r.expense, 0);
     return { income, expense, net: income - expense, endBalance: forecast[forecast.length - 1]?.cumulative ?? 0 };
   }, [forecast]);
+
+  const explainFn = useServerFn(explainForecast);
+  const explainM = useMutation({
+    mutationFn: (payload: ExplainInput) => explainFn({ data: payload }),
+    onSuccess: (res) => {
+      if (!res.ok) toast.error(res.error);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  function runExplain() {
+    explainM.mutate({
+      forecast: forecast.map((r) => ({
+        label: r.label,
+        income: r.income,
+        expense: r.expense,
+        net: r.net,
+        cumulative: r.cumulative,
+        hasScenario: r.hasScenario,
+        partial: r.partial,
+      })),
+      scenario: {
+        startingBalance,
+        incomeMultiplier,
+        incomeAddend,
+        oneOffs: oneOffs.map((o) => ({
+          kind: o.kind,
+          name: o.name,
+          amount: o.amount,
+          monthLabel: monthOptions[o.monthOffset]?.label ?? `+${o.monthOffset}mo`,
+        })),
+        disabledRecurring: recurring
+          .filter((r) => recOverrides[r.id]?.disabled)
+          .map((r) => r.name),
+        overriddenRecurring: recurring
+          .filter((r) => recOverrides[r.id]?.amount !== undefined)
+          .map((r) => ({
+            name: r.name,
+            from: Number(r.amount),
+            to: Number(recOverrides[r.id]!.amount),
+          })),
+        newRecurring: newRecurring.map((nr) => ({
+          kind: nr.kind,
+          name: nr.name,
+          monthlyAmount: nr.monthlyAmount,
+          startLabel: monthOptions[nr.startOffset]?.label ?? `+${nr.startOffset}mo`,
+          endLabel: nr.endOffset != null ? monthOptions[nr.endOffset]?.label ?? `+${nr.endOffset}mo` : null,
+        })),
+      },
+    });
+  }
 
   function addOneOff() {
     setOneOffs((p) => [
@@ -569,6 +623,30 @@ function SimulatePage() {
               </Button>
             </div>
           ))}
+        </CardContent>
+      </Card>
+
+      <Card className="mt-6">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-primary" />
+            Plain-language explanation
+          </CardTitle>
+          <Button size="sm" onClick={runExplain} disabled={explainM.isPending}>
+            {explainM.isPending ? "Thinking…" : "Explain this forecast"}
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {explainM.data?.ok ? (
+            <div className="prose prose-sm max-w-none dark:prose-invert">
+              <ReactMarkdown>{explainM.data.explanation}</ReactMarkdown>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Get an AI narrative of your 12-month forecast — which months are tight, which windfalls
+              offset them, and what to plan for.
+            </p>
+          )}
         </CardContent>
       </Card>
 
