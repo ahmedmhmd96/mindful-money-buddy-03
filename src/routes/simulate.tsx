@@ -577,21 +577,56 @@ function SimulatePage() {
           <CardTitle>Monthly breakdown</CardTitle>
         </CardHeader>
         <CardContent>
+          <div className="mb-4 rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
+            <div className="mb-1 flex items-center gap-1.5 font-medium text-foreground">
+              <Info className="h-3.5 w-3.5" /> How to read this table
+            </div>
+            <ul className="ml-4 list-disc space-y-0.5">
+              <li><span className="font-medium text-foreground">Income / Expense</span> — projected totals for the month from recurring items, income adjustments, and any one-offs you added.</li>
+              <li><span className="font-medium text-foreground">Net</span> = Income − Expense for that month.</li>
+              <li><span className="font-medium text-foreground">Cumulative</span> = Starting balance + running sum of Net. This is your projected balance at month-end.</li>
+              <li>The first month is <span className="font-medium text-foreground">partial</span>: it includes one-off transactions already posted this month plus the full month's recurring items.</li>
+              <li>Rows tagged <Badge variant="secondary" className="mx-0.5 h-4 px-1.5 py-0 text-[10px]">scenario</Badge> include your hypothetical adjustments (overrides, one-offs, new recurring, income tweaks).</li>
+            </ul>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-left text-xs uppercase text-muted-foreground">
                   <th className="py-2">Month</th>
-                  <th className="py-2 text-right">Income</th>
-                  <th className="py-2 text-right">Expense</th>
-                  <th className="py-2 text-right">Net</th>
-                  <th className="py-2 text-right">Cumulative</th>
+                  <th className="py-2 text-right" title="Projected income for the month">Income</th>
+                  <th className="py-2 text-right" title="Projected expenses for the month">Expense</th>
+                  <th className="py-2 text-right" title="Net = Income − Expense">Net</th>
+                  <th className="py-2 text-right" title="Cumulative = Starting balance + running sum of Net">Cumulative</th>
                 </tr>
               </thead>
               <tbody>
+                <tr className="border-b bg-muted/30 text-xs text-muted-foreground">
+                  <td className="py-2 italic">Starting balance</td>
+                  <td className="py-2 text-right">—</td>
+                  <td className="py-2 text-right">—</td>
+                  <td className="py-2 text-right">—</td>
+                  <td className={`py-2 text-right font-medium ${startingBalance >= 0 ? "text-primary" : "text-rose-600"}`}>
+                    {formatEGP(startingBalance)}
+                  </td>
+                </tr>
                 {forecast.map((r) => (
                   <tr key={r.key} className="border-b last:border-0">
-                    <td className="py-2">{r.label}</td>
+                    <td className="py-2">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span>{r.label}</span>
+                        {r.partial && (
+                          <Badge variant="outline" className="h-4 px-1.5 py-0 text-[10px]" title="Includes only the remainder of the current month plus already-posted one-offs">
+                            partial
+                          </Badge>
+                        )}
+                        {r.hasScenario && (
+                          <Badge variant="secondary" className="h-4 px-1.5 py-0 text-[10px]" title="This month is affected by scenario adjustments">
+                            scenario
+                          </Badge>
+                        )}
+                      </div>
+                    </td>
                     <td className="py-2 text-right text-emerald-600">{formatEGP(r.income)}</td>
                     <td className="py-2 text-right text-rose-600">{formatEGP(r.expense)}</td>
                     <td className={`py-2 text-right ${r.net >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
@@ -607,7 +642,7 @@ function SimulatePage() {
           </div>
           {catsQ.data && (
             <p className="mt-3 text-xs text-muted-foreground">
-              Baseline uses your active recurring items and current-month one-off transactions.
+              Baseline uses your active recurring items and current-month one-off transactions. Scenario inputs (income multiplier/addend, overrides, disabled items, one-offs, and new hypothetical recurring) are layered on top.
             </p>
           )}
         </CardContent>
