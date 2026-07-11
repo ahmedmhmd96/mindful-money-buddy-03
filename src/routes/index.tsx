@@ -199,10 +199,13 @@ function Dashboard() {
               <p className="text-sm text-muted-foreground">No categories yet.</p>
             )}
             {cats.map((c) => {
-              const s = perCat.get(c.id) ?? 0;
+              const actual = perCat.get(c.id) ?? 0;
+              const recActual = perCatRecurringActual.get(c.id) ?? 0;
+              const recExpected = expectedRecurringPerCat.get(c.id) ?? 0;
+              const projected = actual - recActual + recExpected;
               const lim = Number(c.monthly_limit);
-              const pct = lim > 0 ? Math.min(100, Math.round((s / lim) * 100)) : 0;
-              const over = lim > 0 && s > lim;
+              const pct = lim > 0 ? Math.min(100, Math.round((projected / lim) * 100)) : 0;
+              const over = lim > 0 && projected > lim;
               return (
                 <div key={c.id}>
                   <div className="mb-1 flex items-center justify-between text-sm">
@@ -214,10 +217,15 @@ function Dashboard() {
                       {c.name}
                     </span>
                     <span className={over ? "text-rose-600" : "text-muted-foreground"}>
-                      {formatEGP(s)}
+                      {formatEGP(projected)}
                       {lim > 0 && <> / {formatEGP(lim)}</>}
                     </span>
                   </div>
+                  {recExpected > 0 && (
+                    <div className="mb-1 text-xs text-muted-foreground">
+                      Actual {formatEGP(actual)} · Recurring {formatEGP(recExpected)}
+                    </div>
+                  )}
                   {lim > 0 && <Progress value={pct} />}
                 </div>
               );
