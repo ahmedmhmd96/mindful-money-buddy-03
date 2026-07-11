@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Line,
   LineChart,
@@ -310,30 +310,24 @@ function SimulatePage() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs">Income multiplier (%)</Label>
-                <Input
-                  type="number"
+                <NumberInput
                   value={incomeMultiplier}
-                  onChange={(e) => setIncomeMultiplier(Number(e.target.value) || 0)}
+                  onChange={setIncomeMultiplier}
+                  allowEmpty={false}
+                  emptyValue={100}
                 />
                 <p className="mt-1 text-xs text-muted-foreground">e.g. 110 = 10% raise</p>
               </div>
               <div>
                 <Label className="text-xs">Extra monthly income (EGP)</Label>
-                <Input
-                  type="number"
-                  value={incomeAddend}
-                  onChange={(e) => setIncomeAddend(Number(e.target.value) || 0)}
-                />
+                <NumberInput value={incomeAddend} onChange={setIncomeAddend} placeholder="0" />
               </div>
             </div>
             <div>
               <Label className="text-xs">Starting balance (EGP)</Label>
-              <Input
-                type="number"
-                value={startingBalance}
-                onChange={(e) => setStartingBalance(Number(e.target.value) || 0)}
-              />
+              <NumberInput value={startingBalance} onChange={setStartingBalance} placeholder="0" />
             </div>
+
           </CardContent>
         </Card>
 
@@ -376,17 +370,15 @@ function SimulatePage() {
                   />
                 </div>
                 <div className="col-span-2">
-                  <Input
-                    type="number"
+                  <NumberInput
                     placeholder="Amount"
                     value={o.amount}
-                    onChange={(e) =>
-                      setOneOffs((p) =>
-                        p.map((x) => (x.id === o.id ? { ...x, amount: Number(e.target.value) || 0 } : x)),
-                      )
+                    onChange={(n) =>
+                      setOneOffs((p) => p.map((x) => (x.id === o.id ? { ...x, amount: n } : x)))
                     }
                   />
                 </div>
+
                 <div className="col-span-2">
                   <Select
                     value={String(o.monthOffset)}
@@ -439,15 +431,20 @@ function SimulatePage() {
                 </div>
                 <div className="col-span-3">
                   <Input
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     placeholder={String(Number(r.amount))}
                     value={ov.amount ?? ""}
+                    onFocus={(e) => e.currentTarget.select()}
                     onChange={(e) => {
-                      const val = e.target.value === "" ? undefined : Number(e.target.value);
+                      const raw = e.target.value;
+                      if (raw !== "" && !/^-?\d*\.?\d*$/.test(raw)) return;
+                      const val = raw === "" ? undefined : Number(raw);
                       setRecOverrides((p) => ({ ...p, [r.id]: { ...p[r.id], amount: val } }));
                     }}
                   />
                 </div>
+
                 <div className="col-span-3 text-xs text-muted-foreground">
                   base {formatEGP(Number(r.amount))}
                 </div>
@@ -506,17 +503,17 @@ function SimulatePage() {
                 />
               </div>
               <div className="col-span-2">
-                <Input
-                  type="number"
+                <NumberInput
                   placeholder="Monthly"
                   value={nr.monthlyAmount}
-                  onChange={(e) =>
+                  onChange={(n) =>
                     setNewRecurring((p) =>
-                      p.map((x) => (x.id === nr.id ? { ...x, monthlyAmount: Number(e.target.value) || 0 } : x)),
+                      p.map((x) => (x.id === nr.id ? { ...x, monthlyAmount: n } : x)),
                     )
                   }
                 />
               </div>
+
               <div className="col-span-2">
                 <Label className="text-xs">Start</Label>
                 <Select
@@ -630,3 +627,55 @@ function StatCard({
     </Card>
   );
 }
+
+function NumberInput({
+  value,
+  onChange,
+  placeholder,
+  allowEmpty = true,
+  emptyValue = 0,
+}: {
+  value: number;
+  onChange: (n: number) => void;
+  placeholder?: string;
+  allowEmpty?: boolean;
+  emptyValue?: number;
+}) {
+  const [text, setText] = useState<string>(value === 0 && allowEmpty ? "" : String(value));
+
+  // Sync when parent resets/changes value externally
+  useEffect(() => {
+    const parsed = text === "" ? emptyValue : Number(text);
+    if (!Number.isNaN(parsed) && parsed === value) return;
+    setText(value === 0 && allowEmpty ? "" : String(value));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+
+  return (
+    <Input
+      type="text"
+      inputMode="decimal"
+      placeholder={placeholder}
+      value={text}
+      onFocus={(e) => e.currentTarget.select()}
+      onChange={(e) => {
+        const raw = e.target.value;
+        // allow empty, digits, one dot, optional leading minus
+        if (raw !== "" && !/^-?\d*\.?\d*$/.test(raw)) return;
+        setText(raw);
+        if (raw === "" || raw === "-" || raw === "." || raw === "-.") {
+          onChange(emptyValue);
+        } else {
+          const n = Number(raw);
+          if (!Number.isNaN(n)) onChange(n);
+        }
+      }}
+      onBlur={() => {
+        if (text === "" || text === "-" || text === "." || text === "-.") {
+          if (!allowEmpty) setText(String(emptyValue));
+        }
+      }}
+    />
+  );
+}
+
