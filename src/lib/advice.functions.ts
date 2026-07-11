@@ -59,7 +59,8 @@ Current month summary:
 - Total income so far: ${income.toFixed(2)} EGP
 - Total spending so far: ${spend.toFixed(2)} EGP
 - Net: ${(income - spend).toFixed(2)} EGP
-- Days left in month: ${daysLeft}
+- Budget cycle ends: ${cycleEndLabel} (day ${cycleEndDay} of the month)
+- Days left in cycle: ${daysLeft}
 
 Category spending vs. monthly limits:
 ${categoryLines || "(no categories yet)"}
