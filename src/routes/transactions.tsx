@@ -40,10 +40,12 @@ function TransactionsPage() {
   const delFn = useServerFn(deleteTransaction);
 
   const [filter, setFilter] = useState<Filter>("month");
-  const range = useMemo(() => {
+  const range = useMemo<{ from?: string; to?: string }>(() => {
     if (filter === "all") return {};
-    if (filter === "month") return monthRange();
-    // week: last 7 days including today
+    if (filter === "month") {
+      const { start, end } = monthRange();
+      return { from: start, to: end };
+    }
     const end = new Date();
     end.setDate(end.getDate() + 1);
     const start = new Date();
