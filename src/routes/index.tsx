@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useMemo } from "react";
+import { type ReactNode, useEffect, useMemo } from "react";
 import { AppShell } from "@/components/AppShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -185,7 +185,14 @@ function Dashboard() {
           label={`Daily limit (until ${cycleEndLabel})`}
           value={formatEGP(dailyLimit)}
           tone={dailyLimit >= 0 ? "text-primary" : "text-rose-600"}
-          sub={`${daysLeft} day${daysLeft === 1 ? "" : "s"} left · cycle end day ${cycleEndDay}`}
+          sub={
+            <>
+              {daysLeft} day{daysLeft === 1 ? "" : "s"} left ·{" "}
+              <Link to="/budget" className="text-primary hover:underline">
+                cycle end day {cycleEndDay}
+              </Link>
+            </>
+          }
         />
       </div>
 
@@ -393,7 +400,7 @@ function StatCard({
   label: string;
   value: string;
   tone: string;
-  sub?: string;
+  sub?: ReactNode;
 }) {
   return (
     <Card>
