@@ -212,8 +212,8 @@ function SimulatePage() {
 
   const explainFn = useServerFn(explainForecast);
   const explainM = useMutation({
-    mutationFn: (payload: Parameters<typeof explainFn>[0]["data"]) => explainFn({ data: payload }),
-    onSuccess: (res) => {
+    mutationFn: (payload: Parameters<typeof explainForecast>[0]["data"]) =>
+      explainFn({ data: payload }),
       if (!res.ok) toast.error(res.error);
     },
     onError: (e: Error) => toast.error(e.message),
