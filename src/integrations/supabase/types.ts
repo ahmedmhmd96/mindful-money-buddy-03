@@ -41,6 +41,47 @@ export type Database = {
         }
         Relationships: []
       }
+      goals: {
+        Row: {
+          active: boolean
+          category_id: string | null
+          created_at: string
+          id: string
+          kind: string
+          target_amount: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          category_id?: string | null
+          created_at?: string
+          id?: string
+          kind: string
+          target_amount: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          category_id?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          target_amount?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goals_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       recurring_items: {
         Row: {
           active: boolean
