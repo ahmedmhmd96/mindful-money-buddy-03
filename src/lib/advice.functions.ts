@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { generateText } from "ai";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createLovableAiGatewayProvider } from "./ai-gateway.server";
-import { daysLeftInMonth, monthRange } from "./format";
+import { cycleInfo, monthRange } from "./format";
 
 export const getBudgetAdvice = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
