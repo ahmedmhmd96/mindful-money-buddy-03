@@ -153,9 +153,11 @@ function Dashboard() {
   // Daily spending limit derived from projected net over the remaining days of the cycle
   const cycleEndDay = settingsQ.data?.cycle_end_day ?? 31;
   const { cycleEnd, daysLeft } = cycleInfo(cycleEndDay);
-  // Remaining budget = projected net minus what is still expected to be spent (recurring not yet posted + one-offs already recorded stay put).
-  // Simpler + intuitive: divide projected net over remaining days.
+  const savingsTarget = (goalsQ.data ?? [])
+    .filter((g) => g.kind === "savings")
+    .reduce((s, g) => s + Number(g.target_amount), 0);
   const dailyLimit = projectedNet / daysLeft;
+  const dailyLimitWithGoal = (projectedNet - savingsTarget) / daysLeft;
   const cycleEndLabel = cycleEnd.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 
   return (
@@ -186,11 +188,20 @@ function Dashboard() {
         />
         <StatCard
           label={`Daily limit (until ${cycleEndLabel})`}
-          value={formatEGP(dailyLimit)}
-          tone={dailyLimit >= 0 ? "text-primary" : "text-rose-600"}
+          value={formatEGP(savingsTarget > 0 ? dailyLimitWithGoal : dailyLimit)}
+          tone={(savingsTarget > 0 ? dailyLimitWithGoal : dailyLimit) >= 0 ? "text-primary" : "text-rose-600"}
           sub={
             <>
-              {daysLeft} day{daysLeft === 1 ? "" : "s"} left ·{" "}
+              {savingsTarget > 0 ? (
+                <>
+                  Spend up to {formatEGP(dailyLimitWithGoal)}/day to save{" "}
+                  {formatEGP(savingsTarget)} ·{" "}
+                </>
+              ) : (
+                <>
+                  {daysLeft} day{daysLeft === 1 ? "" : "s"} left ·{" "}
+                </>
+              )}
               <Link to="/budget" className="text-primary hover:underline">
                 cycle end day {cycleEndDay}
               </Link>
@@ -198,6 +209,7 @@ function Dashboard() {
           }
         />
       </div>
+
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <Card>
