@@ -16,7 +16,14 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
-import { Trash2 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   deleteCategory,
@@ -35,6 +42,31 @@ export const Route = createFileRoute("/budget")({
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
+type RecurringValues = {
+  kind: "expense" | "income";
+  name: string;
+  amount: number;
+  category_id: string | null;
+  frequency: "monthly" | "weekly";
+  day_of_month: number | null;
+  day_of_week: number | null;
+  active?: boolean;
+};
+
+type Category = { id: string; name: string };
+
+type RecurringRow = {
+  id: string;
+  kind: string;
+  name: string;
+  amount: number | string;
+  category_id: string | null;
+  frequency: string;
+  day_of_month: number | null;
+  day_of_week: number | null;
+  active: boolean;
+};
+
 function BudgetPage() {
   const qc = useQueryClient();
   const catsFn = useServerFn(listCategories);
@@ -43,8 +75,6 @@ function BudgetPage() {
   const delCat = useServerFn(deleteCategory);
   const saveRec = useServerFn(upsertRecurring);
   const delRec = useServerFn(deleteRecurring);
-
-
 
   const catsQ = useQuery({ queryKey: ["categories"], queryFn: () => catsFn({ data: undefined }) });
   const recQ = useQuery({ queryKey: ["recurring"], queryFn: () => recFn({ data: undefined }) });
@@ -77,46 +107,11 @@ function BudgetPage() {
   const recs = recQ.data ?? [];
 
   const [newCatName, setNewCatName] = useState("");
-
-  // Recurring form
-  const [rKind, setRKind] = useState<"expense" | "income">("expense");
-  const [rName, setRName] = useState("");
-  const [rAmount, setRAmount] = useState("");
-  const [rCat, setRCat] = useState<string>("");
-  const [rFreq, setRFreq] = useState<"monthly" | "weekly">("monthly");
-  const [rDom, setRDom] = useState("1");
-  const [rDow, setRDow] = useState("1");
-
-  function submitRec(e: React.FormEvent) {
-    e.preventDefault();
-    const amt = Number(rAmount);
-    if (!rName || !Number.isFinite(amt) || amt <= 0) {
-      toast.error("Enter name and valid amount");
-      return;
-    }
-    saveRecM.mutate(
-      {
-        kind: rKind,
-        name: rName,
-        amount: amt,
-        category_id: rKind === "expense" ? rCat || null : null,
-        frequency: rFreq,
-        day_of_month: rFreq === "monthly" ? Number(rDom) : null,
-        day_of_week: rFreq === "weekly" ? Number(rDow) : null,
-      },
-      {
-        onSuccess: () => {
-          setRName("");
-          setRAmount("");
-        },
-      },
-    );
-  }
+  const [editingRec, setEditingRec] = useState<RecurringRow | null>(null);
 
   return (
     <AppShell>
       <h1 className="mb-4 text-2xl font-semibold">Budget</h1>
-
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
@@ -158,85 +153,18 @@ function BudgetPage() {
             <CardTitle>Recurring expenses & income</CardTitle>
           </CardHeader>
           <CardContent>
-            <form onSubmit={submitRec} className="mb-4 space-y-3">
-              <Tabs value={rKind} onValueChange={(v) => setRKind(v as "expense" | "income")}>
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="expense">Expense</TabsTrigger>
-                  <TabsTrigger value="income">Income</TabsTrigger>
-                </TabsList>
-              </Tabs>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-1.5">
-                  <Label>Name</Label>
-                  <Input value={rName} onChange={(e) => setRName(e.target.value)} placeholder="Rent, Salary…" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Amount (EGP)</Label>
-                  <Input type="number" min="0" step="0.01" value={rAmount} onChange={(e) => setRAmount(e.target.value)} />
-                </div>
-              </div>
-              {rKind === "expense" && (
-                <div className="space-y-1.5">
-                  <Label>Category</Label>
-                  <Select value={rCat} onValueChange={setRCat}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {cats.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-1.5">
-                  <Label>Frequency</Label>
-                  <Select value={rFreq} onValueChange={(v) => setRFreq(v as "monthly" | "weekly")}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="monthly">Monthly</SelectItem>
-                      <SelectItem value="weekly">Weekly</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                {rFreq === "monthly" ? (
-                  <div className="space-y-1.5">
-                    <Label>Day of month</Label>
-                    <Input type="number" min="1" max="31" value={rDom} onChange={(e) => setRDom(e.target.value)} />
-                  </div>
-                ) : (
-                  <div className="space-y-1.5">
-                    <Label>Day of week</Label>
-                    <Select value={rDow} onValueChange={setRDow}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {WEEKDAYS.map((n, i) => (
-                          <SelectItem key={i} value={String(i)}>
-                            {n}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-              </div>
-              <Button type="submit" className="w-full" disabled={saveRecM.isPending}>
-                Add recurring
-              </Button>
-            </form>
+            <RecurringForm
+              key="add"
+              mode="add"
+              cats={cats}
+              submitting={saveRecM.isPending}
+              onSubmit={(values, reset) => saveRecM.mutate(values, { onSuccess: reset })}
+            />
 
             {recs.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No recurring items yet.</p>
+              <p className="mt-4 text-sm text-muted-foreground">No recurring items yet.</p>
             ) : (
-              <ul className="divide-y">
+              <ul className="mt-4 divide-y">
                 {recs.map((r) => (
                   <li key={r.id} className="flex items-center justify-between py-2 text-sm">
                     <div className="min-w-0">
@@ -268,6 +196,14 @@ function BudgetPage() {
                       <Button
                         variant="ghost"
                         size="icon"
+                        onClick={() => setEditingRec(r as RecurringRow)}
+                        aria-label="Edit"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={() => delRecM.mutate(r.id)}
                         aria-label="Delete"
                       >
@@ -281,7 +217,160 @@ function BudgetPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={!!editingRec} onOpenChange={(o) => !o && setEditingRec(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit recurring item</DialogTitle>
+          </DialogHeader>
+          {editingRec && (
+            <RecurringForm
+              key={editingRec.id}
+              mode="edit"
+              cats={cats}
+              submitting={saveRecM.isPending}
+              initial={editingRec}
+              onSubmit={(values) =>
+                saveRecM.mutate(
+                  { id: editingRec.id, ...values, active: editingRec.active },
+                  { onSuccess: () => setEditingRec(null) },
+                )
+              }
+            />
+          )}
+          <DialogFooter />
+        </DialogContent>
+      </Dialog>
     </AppShell>
+  );
+}
+
+function RecurringForm({
+  mode,
+  cats,
+  submitting,
+  initial,
+  onSubmit,
+}: {
+  mode: "add" | "edit";
+  cats: Category[];
+  submitting: boolean;
+  initial?: RecurringRow;
+  onSubmit: (values: RecurringValues, reset: () => void) => void;
+}) {
+  const [rKind, setRKind] = useState<"expense" | "income">(
+    (initial?.kind as "expense" | "income") ?? "expense",
+  );
+  const [rName, setRName] = useState(initial?.name ?? "");
+  const [rAmount, setRAmount] = useState(initial ? String(initial.amount) : "");
+  const [rCat, setRCat] = useState<string>(initial?.category_id ?? "");
+  const [rFreq, setRFreq] = useState<"monthly" | "weekly">(
+    (initial?.frequency as "monthly" | "weekly") ?? "monthly",
+  );
+  const [rDom, setRDom] = useState(String(initial?.day_of_month ?? 1));
+  const [rDow, setRDow] = useState(String(initial?.day_of_week ?? 1));
+
+  const reset = () => {
+    setRName("");
+    setRAmount("");
+  };
+
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    const amt = Number(rAmount);
+    if (!rName || !Number.isFinite(amt) || amt <= 0) {
+      toast.error("Enter name and valid amount");
+      return;
+    }
+    onSubmit(
+      {
+        kind: rKind,
+        name: rName,
+        amount: amt,
+        category_id: rKind === "expense" ? rCat || null : null,
+        frequency: rFreq,
+        day_of_month: rFreq === "monthly" ? Number(rDom) : null,
+        day_of_week: rFreq === "weekly" ? Number(rDow) : null,
+      },
+      reset,
+    );
+  }
+
+  return (
+    <form onSubmit={submit} className="space-y-3">
+      <Tabs value={rKind} onValueChange={(v) => setRKind(v as "expense" | "income")}>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="expense">Expense</TabsTrigger>
+          <TabsTrigger value="income">Income</TabsTrigger>
+        </TabsList>
+      </Tabs>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-1.5">
+          <Label>Name</Label>
+          <Input value={rName} onChange={(e) => setRName(e.target.value)} placeholder="Rent, Salary…" />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Amount (EGP)</Label>
+          <Input type="number" min="0" step="0.01" value={rAmount} onChange={(e) => setRAmount(e.target.value)} />
+        </div>
+      </div>
+      {rKind === "expense" && (
+        <div className="space-y-1.5">
+          <Label>Category</Label>
+          <Select value={rCat} onValueChange={setRCat}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select category" />
+            </SelectTrigger>
+            <SelectContent>
+              {cats.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+      <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-1.5">
+          <Label>Frequency</Label>
+          <Select value={rFreq} onValueChange={(v) => setRFreq(v as "monthly" | "weekly")}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="monthly">Monthly</SelectItem>
+              <SelectItem value="weekly">Weekly</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        {rFreq === "monthly" ? (
+          <div className="space-y-1.5">
+            <Label>Day of month</Label>
+            <Input type="number" min="1" max="31" value={rDom} onChange={(e) => setRDom(e.target.value)} />
+          </div>
+        ) : (
+          <div className="space-y-1.5">
+            <Label>Day of week</Label>
+            <Select value={rDow} onValueChange={setRDow}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {WEEKDAYS.map((n, i) => (
+                  <SelectItem key={i} value={String(i)}>
+                    {n}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+      </div>
+      <Button type="submit" className="w-full" disabled={submitting}>
+        {mode === "add" ? "Add recurring" : "Save changes"}
+      </Button>
+    </form>
   );
 }
 
