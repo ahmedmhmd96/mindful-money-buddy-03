@@ -17,6 +17,7 @@ import {
   runRecurring,
 } from "@/lib/budget.functions";
 import { getBudgetAdvice } from "@/lib/advice.functions";
+import { listGoals } from "@/lib/goals.functions";
 import { cycleInfo, formatEGP, monthRange } from "@/lib/format";
 
 export const Route = createFileRoute("/")({
@@ -72,6 +73,8 @@ function Dashboard() {
     queryFn: () => listTxFn({ data: { limit: 8 } }),
   });
   const recQ = useQuery({ queryKey: ["recurring"], queryFn: () => listRecFn({ data: undefined }) });
+  const listGoalsFn = useServerFn(listGoals);
+  const goalsQ = useQuery({ queryKey: ["goals"], queryFn: () => listGoalsFn({ data: undefined }) });
 
   const advice = useMutation({
     mutationFn: () => adviceFn({ data: undefined }),
@@ -348,6 +351,67 @@ function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      <Card className="mt-6">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Goals</CardTitle>
+          <Link to="/goals" className="text-xs text-primary hover:underline">
+            Manage →
+          </Link>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {(goalsQ.data ?? []).length === 0 && (
+            <p className="text-sm text-muted-foreground">
+              No goals yet.{" "}
+              <Link to="/goals" className="text-primary hover:underline">
+                Set a savings target →
+              </Link>
+            </p>
+          )}
+          {(goalsQ.data ?? []).map((g) => {
+            const target = Number(g.target_amount);
+            let projected: number;
+            let onTrack: boolean;
+            let label: string;
+            let hint: string;
+            if (g.kind === "savings") {
+              projected = projectedNet;
+              onTrack = projected >= target;
+              label = "Monthly savings";
+              hint = onTrack
+                ? `On track — ${formatEGP(projected - target)} above target`
+                : `Short by ${formatEGP(target - projected)}`;
+            } else {
+              const catActual = g.category_id ? perCat.get(g.category_id) ?? 0 : 0;
+              const catRecActual = g.category_id ? perCatRecurringActual.get(g.category_id) ?? 0 : 0;
+              const catRecExpected = g.category_id ? expectedRecurringPerCat.get(g.category_id) ?? 0 : 0;
+              projected = catActual - catRecActual + catRecExpected;
+              onTrack = projected <= target;
+              const catName = cats.find((c) => c.id === g.category_id)?.name ?? "Category";
+              label = `${catName} cap`;
+              hint = onTrack
+                ? `Within cap — ${formatEGP(target - projected)} remaining`
+                : `Over cap by ${formatEGP(projected - target)}`;
+            }
+            const pct = target > 0 ? Math.min(100, Math.max(0, (projected / target) * 100)) : 0;
+            return (
+              <div key={g.id}>
+                <div className="mb-1 flex items-center justify-between text-sm">
+                  <span className="font-medium">{label}</span>
+                  <span className={onTrack ? "text-emerald-600" : "text-rose-600"}>
+                    {formatEGP(projected)} / {formatEGP(target)}
+                  </span>
+                </div>
+                <Progress value={pct} />
+                <div className={`mt-1 text-xs ${onTrack ? "text-emerald-600" : "text-rose-600"}`}>
+                  {hint}
+                </div>
+              </div>
+            );
+          })}
+        </CardContent>
+      </Card>
+
 
       <Card className="mt-6">
         <CardHeader className="flex flex-row items-center justify-between">
