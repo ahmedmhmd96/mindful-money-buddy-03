@@ -128,6 +128,14 @@ function Dashboard() {
   const projectedSpend = oneOffSpend + expectedRecurringExpense;
   const projectedNet = projectedIncome - projectedSpend;
 
+  // Daily spending limit derived from projected net over the remaining days of the cycle
+  const cycleEndDay = settingsQ.data?.cycle_end_day ?? 31;
+  const { cycleEnd, daysLeft } = cycleInfo(cycleEndDay);
+  // Remaining budget = projected net minus what is still expected to be spent (recurring not yet posted + one-offs already recorded stay put).
+  // Simpler + intuitive: divide projected net over remaining days.
+  const dailyLimit = projectedNet / daysLeft;
+  const cycleEndLabel = cycleEnd.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+
   return (
     <AppShell>
       <div className="mb-6">
