@@ -400,7 +400,7 @@ function StatCard({
   label: string;
   value: string;
   tone: string;
-  sub?: string;
+  sub?: React.ReactNode;
 }) {
   return (
     <Card>
