@@ -431,15 +431,20 @@ function SimulatePage() {
                 </div>
                 <div className="col-span-3">
                   <Input
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     placeholder={String(Number(r.amount))}
                     value={ov.amount ?? ""}
+                    onFocus={(e) => e.currentTarget.select()}
                     onChange={(e) => {
-                      const val = e.target.value === "" ? undefined : Number(e.target.value);
+                      const raw = e.target.value;
+                      if (raw !== "" && !/^-?\d*\.?\d*$/.test(raw)) return;
+                      const val = raw === "" ? undefined : Number(raw);
                       setRecOverrides((p) => ({ ...p, [r.id]: { ...p[r.id], amount: val } }));
                     }}
                   />
                 </div>
+
                 <div className="col-span-3 text-xs text-muted-foreground">
                   base {formatEGP(Number(r.amount))}
                 </div>
