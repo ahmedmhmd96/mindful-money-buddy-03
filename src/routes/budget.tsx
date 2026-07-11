@@ -45,6 +45,20 @@ function BudgetPage() {
   const delCat = useServerFn(deleteCategory);
   const saveRec = useServerFn(upsertRecurring);
   const delRec = useServerFn(deleteRecurring);
+  const settingsFn = useServerFn(getSettings);
+  const saveSettings = useServerFn(updateSettings);
+
+  const settingsQ = useQuery({ queryKey: ["settings"], queryFn: () => settingsFn({ data: undefined }) });
+  const saveSettingsM = useMutation({
+    mutationFn: (cycle_end_day: number) => saveSettings({ data: { cycle_end_day } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["settings"] });
+      toast.success("Cycle end day saved");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const [cycleDayInput, setCycleDayInput] = useState<string>("");
+  const currentCycleDay = settingsQ.data?.cycle_end_day ?? 31;
 
   const catsQ = useQuery({ queryKey: ["categories"], queryFn: () => catsFn({ data: undefined }) });
   const recQ = useQuery({ queryKey: ["recurring"], queryFn: () => recFn({ data: undefined }) });
