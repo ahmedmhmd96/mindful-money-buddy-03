@@ -13,7 +13,7 @@ type ForecastRow = {
   partial: boolean;
 };
 
-type ScenarioSummary = {
+export type ExplainScenario = {
   startingBalance: number;
   incomeMultiplier: number;
   incomeAddend: number;
@@ -22,6 +22,8 @@ type ScenarioSummary = {
   overriddenRecurring: { name: string; from: number; to: number }[];
   newRecurring: { kind: "income" | "expense"; name: string; monthlyAmount: number; startLabel: string; endLabel: string | null }[];
 };
+
+export type ExplainInput = { forecast: ForecastRow[]; scenario: ExplainScenario };
 
 export const explainForecast = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
