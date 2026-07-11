@@ -370,17 +370,15 @@ function SimulatePage() {
                   />
                 </div>
                 <div className="col-span-2">
-                  <Input
-                    type="number"
+                  <NumberInput
                     placeholder="Amount"
                     value={o.amount}
-                    onChange={(e) =>
-                      setOneOffs((p) =>
-                        p.map((x) => (x.id === o.id ? { ...x, amount: Number(e.target.value) || 0 } : x)),
-                      )
+                    onChange={(n) =>
+                      setOneOffs((p) => p.map((x) => (x.id === o.id ? { ...x, amount: n } : x)))
                     }
                   />
                 </div>
+
                 <div className="col-span-2">
                   <Select
                     value={String(o.monthOffset)}
