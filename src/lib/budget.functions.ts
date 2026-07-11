@@ -34,6 +34,22 @@ export const updateSettings = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const deleteAllTransactions = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+    const { error, count } = await supabase
+      .from("transactions")
+      .delete({ count: "exact" })
+      .eq("user_id", userId);
+    if (error) throw error;
+    await supabase
+      .from("recurring_items")
+      .update({ last_generated_on: null })
+      .eq("user_id", userId);
+    return { ok: true, deleted: count ?? 0 };
+  });
+
 const DEFAULT_CATEGORIES = [
   { name: "Food", color: "#f97316" },
   { name: "Transport", color: "#3b82f6" },
