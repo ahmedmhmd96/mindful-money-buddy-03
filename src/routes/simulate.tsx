@@ -503,17 +503,17 @@ function SimulatePage() {
                 />
               </div>
               <div className="col-span-2">
-                <Input
-                  type="number"
+                <NumberInput
                   placeholder="Monthly"
                   value={nr.monthlyAmount}
-                  onChange={(e) =>
+                  onChange={(n) =>
                     setNewRecurring((p) =>
-                      p.map((x) => (x.id === nr.id ? { ...x, monthlyAmount: Number(e.target.value) || 0 } : x)),
+                      p.map((x) => (x.id === nr.id ? { ...x, monthlyAmount: n } : x)),
                     )
                   }
                 />
               </div>
+
               <div className="col-span-2">
                 <Label className="text-xs">Start</Label>
                 <Select
