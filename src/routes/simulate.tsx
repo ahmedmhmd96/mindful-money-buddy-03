@@ -310,30 +310,24 @@ function SimulatePage() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs">Income multiplier (%)</Label>
-                <Input
-                  type="number"
+                <NumberInput
                   value={incomeMultiplier}
-                  onChange={(e) => setIncomeMultiplier(Number(e.target.value) || 0)}
+                  onChange={setIncomeMultiplier}
+                  allowEmpty={false}
+                  emptyValue={100}
                 />
                 <p className="mt-1 text-xs text-muted-foreground">e.g. 110 = 10% raise</p>
               </div>
               <div>
                 <Label className="text-xs">Extra monthly income (EGP)</Label>
-                <Input
-                  type="number"
-                  value={incomeAddend}
-                  onChange={(e) => setIncomeAddend(Number(e.target.value) || 0)}
-                />
+                <NumberInput value={incomeAddend} onChange={setIncomeAddend} placeholder="0" />
               </div>
             </div>
             <div>
               <Label className="text-xs">Starting balance (EGP)</Label>
-              <Input
-                type="number"
-                value={startingBalance}
-                onChange={(e) => setStartingBalance(Number(e.target.value) || 0)}
-              />
+              <NumberInput value={startingBalance} onChange={setStartingBalance} placeholder="0" />
             </div>
+
           </CardContent>
         </Card>
 
