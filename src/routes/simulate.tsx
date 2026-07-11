@@ -627,6 +627,30 @@ function SimulatePage() {
       </Card>
 
       <Card className="mt-6">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-primary" />
+            Plain-language explanation
+          </CardTitle>
+          <Button size="sm" onClick={runExplain} disabled={explainM.isPending}>
+            {explainM.isPending ? "Thinking…" : "Explain this forecast"}
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {explainM.data?.ok ? (
+            <div className="prose prose-sm max-w-none dark:prose-invert">
+              <ReactMarkdown>{explainM.data.explanation}</ReactMarkdown>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Get an AI narrative of your 12-month forecast — which months are tight, which windfalls
+              offset them, and what to plan for.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="mt-6">
         <CardHeader>
           <CardTitle>Monthly breakdown</CardTitle>
         </CardHeader>
