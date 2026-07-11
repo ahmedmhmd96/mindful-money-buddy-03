@@ -120,12 +120,15 @@ function SimulatePage() {
       expense: number;
       net: number;
       cumulative: number;
+      hasScenario: boolean;
+      partial: boolean;
     }[] = [];
     let cumulative = startingBalance;
     for (let i = 0; i < 12; i++) {
       const d = new Date(today.getFullYear(), today.getMonth() + i, 1);
       const year = d.getFullYear();
       const month = d.getMonth();
+      let hasScenario = false;
 
       // Recurring (existing) — apply overrides
       let recIncome = 0;
@@ -133,8 +136,9 @@ function SimulatePage() {
       for (const r of recurring) {
         if (!r.active) continue;
         const ov = recOverrides[r.id] ?? {};
-        if (ov.disabled) continue;
+        if (ov.disabled) { hasScenario = true; continue; }
         const base = ov.amount ?? Number(r.amount);
+        if (ov.amount !== undefined) hasScenario = true;
         const monthly =
           r.frequency === "monthly"
             ? base
@@ -147,17 +151,20 @@ function SimulatePage() {
       for (const nr of newRecurring) {
         if (i < nr.startOffset) continue;
         if (nr.endOffset != null && i > nr.endOffset) continue;
+        hasScenario = true;
         if (nr.kind === "income") recIncome += nr.monthlyAmount;
         else recExpense += nr.monthlyAmount;
       }
 
       // Apply income adjustments
+      if (incomeMultiplier !== 100 || incomeAddend !== 0) hasScenario = true;
       let income = recIncome * (incomeMultiplier / 100) + incomeAddend;
       let expense = recExpense;
 
       // One-offs assigned to this month
       for (const o of oneOffs) {
         if (o.monthOffset !== i) continue;
+        hasScenario = true;
         if (o.kind === "income") income += o.amount;
         else expense += o.amount;
       }
@@ -177,6 +184,8 @@ function SimulatePage() {
         expense,
         net,
         cumulative,
+        hasScenario,
+        partial: i === 0,
       });
     }
     return rows;
