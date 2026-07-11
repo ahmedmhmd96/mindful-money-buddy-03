@@ -49,7 +49,9 @@ export const getBudgetAdvice = createServerFn({ method: "POST" })
       .map((r) => `- ${r.name}: ${r.kind} ${Number(r.amount).toFixed(2)} EGP ${r.frequency}`)
       .join("\n");
 
-    const daysLeft = daysLeftInMonth();
+    const cycleEndDay = settings?.cycle_end_day ?? 31;
+    const { cycleEnd, daysLeft } = cycleInfo(cycleEndDay);
+    const cycleEndLabel = cycleEnd.toISOString().slice(0, 10);
 
     const prompt = `You are a personal budgeting coach. All amounts are in Egyptian Pounds (EGP).
 
