@@ -646,14 +646,13 @@ function SimulatePage() {
           </Button>
         </CardHeader>
         <CardContent>
-          {explainM.data?.ok ? (
+          {lastExplanation ? (
             <div className="prose prose-sm max-w-none dark:prose-invert">
-              <ReactMarkdown>{explainM.data.explanation}</ReactMarkdown>
+              <ReactMarkdown>{lastExplanation}</ReactMarkdown>
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">
-              Get an AI narrative of your 12-month forecast — which months are tight, which windfalls
-              offset them, and what to plan for.
+              Click <span className="font-medium text-foreground">Explain this forecast</span> to get a plain-language walk-through of the months above — which are tight, which windfalls offset them, and what to plan for.
             </p>
           )}
         </CardContent>
