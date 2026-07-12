@@ -548,8 +548,11 @@ function SimulatePage() {
               Simulate a new subscription, salary, or bill without saving it.
             </p>
           )}
-          {newRecurring.map((nr) => (
-            <div key={nr.id} className="grid grid-cols-12 items-end gap-2">
+          {newRecurring.map((nr) => {
+            const invalidWindow = nr.endOffset != null && nr.endOffset < nr.startOffset;
+            return (
+            <div key={nr.id} className="space-y-1">
+            <div className="grid grid-cols-12 items-end gap-2">
               <div className="col-span-2">
                 <Select
                   value={nr.kind}
@@ -631,7 +634,14 @@ function SimulatePage() {
                 <Trash2 className="h-4 w-4" />
               </Button>
             </div>
-          ))}
+            {invalidWindow && (
+              <p className="pl-1 text-xs text-rose-600">
+                End month is before start — this item won't contribute to the forecast. Adjust the dates or set End to Ongoing.
+              </p>
+            )}
+            </div>
+            );
+          })}
         </CardContent>
       </Card>
 
