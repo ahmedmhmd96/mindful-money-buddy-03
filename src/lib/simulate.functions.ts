@@ -1,33 +1,71 @@
 import { createServerFn } from "@tanstack/react-start";
 import { generateText } from "ai";
+import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createLovableAiGatewayProvider } from "./ai-gateway.server";
 
-type ForecastRow = {
-  label: string;
-  income: number;
-  expense: number;
-  net: number;
-  cumulative: number;
-  hasScenario: boolean;
-  partial: boolean;
-};
+const kind = z.enum(["income", "expense"]);
+const name60 = z.string().trim().max(60);
 
-export type ExplainScenario = {
-  startingBalance: number;
-  incomeMultiplier: number;
-  incomeAddend: number;
-  oneOffs: { kind: "income" | "expense"; name: string; amount: number; monthLabel: string }[];
-  disabledRecurring: string[];
-  overriddenRecurring: { name: string; from: number; to: number }[];
-  newRecurring: { kind: "income" | "expense"; name: string; monthlyAmount: number; startLabel: string; endLabel: string | null }[];
-};
+const ForecastRowSchema = z.object({
+  label: z.string().trim().max(40),
+  income: z.number().finite(),
+  expense: z.number().finite(),
+  net: z.number().finite(),
+  cumulative: z.number().finite(),
+  hasScenario: z.boolean(),
+  partial: z.boolean(),
+});
 
-export type ExplainInput = { forecast: ForecastRow[]; scenario: ExplainScenario };
+const ExplainScenarioSchema = z.object({
+  startingBalance: z.number().finite(),
+  incomeMultiplier: z.number().finite(),
+  incomeAddend: z.number().finite(),
+  oneOffs: z
+    .array(
+      z.object({
+        kind,
+        name: name60,
+        amount: z.number().finite(),
+        monthLabel: z.string().trim().max(20),
+      }),
+    )
+    .max(24),
+  disabledRecurring: z.array(name60).max(24),
+  overriddenRecurring: z
+    .array(
+      z.object({
+        name: name60,
+        from: z.number().finite(),
+        to: z.number().finite(),
+      }),
+    )
+    .max(24),
+  newRecurring: z
+    .array(
+      z.object({
+        kind,
+        name: name60,
+        monthlyAmount: z.number().finite(),
+        startLabel: z.string().trim().max(20),
+        endLabel: z.string().trim().max(20).nullable(),
+      }),
+    )
+    .max(12),
+});
+
+const ExplainInputSchema = z.object({
+  forecast: z.array(ForecastRowSchema).max(24),
+  scenario: ExplainScenarioSchema,
+});
+
+export type ForecastRow = z.infer<typeof ForecastRowSchema>;
+export type ExplainScenario = z.infer<typeof ExplainScenarioSchema>;
+export type ExplainInput = z.infer<typeof ExplainInputSchema>;
 
 export const explainForecast = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => input as ExplainInput)
+  .inputValidator((input: unknown) => ExplainInputSchema.parse(input))
   .handler(async ({ data }) => {
     const key = process.env.LOVABLE_API_KEY;
     if (!key) throw new Error("Missing LOVABLE_API_KEY");

@@ -1,54 +1,64 @@
-## Overview
+## Goal
 
-Personal budgeting app in EGP with cloud sync via Lovable Cloud. Email + password login so your data follows you across devices. Lovable AI generates budgeting advice.
+Close the gaps surfaced by the test-it review on `/simulate` without changing the feature's shape. Ephemeral behavior, 12-month horizon, and AI explanation stay as-is.
 
-## Auth
+## Scope
 
-- Enable Lovable Cloud (Supabase-backed).
-- Email + password sign-in on `/auth` (sign up / sign in tabs).
-- All app routes live under the managed `_authenticated/` layout.
-- No profile fields needed (single user, just email).
+UI + a small server-fn hardening pass. No schema changes, no persistence.
 
-## Data model (all with RLS scoped to `auth.uid()`)
+## Changes
 
-- `categories` — id, user_id, name, monthly_limit (EGP), color, created_at.
-- `transactions` — id, user_id, kind ('expense'|'income'), amount, category_id (nullable for income), note, occurred_on (date), created_at.
-- `recurring_items` — id, user_id, kind, amount, category_id, name, frequency ('monthly'|'weekly'), day_of_month (1–31) or day_of_week (0–6), last_generated_on, active.
+### 1. Server function hardening (`src/lib/simulate.functions.ts`)
+- Add a Zod schema for `ExplainInput` and validate inside `inputValidator` (replace the `as` cast). Reject malformed payloads with a clear error.
+- Cap payload size: max 24 one-offs, 24 overrides, 12 new-recurring, 12 disabled. Trim names to 60 chars before building the prompt.
+- Keep the existing 429 / 402 / generic error mapping.
 
-Each table: GRANTs for `authenticated` + `service_role`; RLS policies for select/insert/update/delete where `auth.uid() = user_id`. On first login, a server function seeds default categories (Food, Transport, Groceries, Bills, Entertainment, Health, Shopping, Other) for the user if none exist.
+### 2. Numeric input UX (all scenario fields)
+- Extract a small `NumberField` wrapper (or shared `onChange` helper) so every amount/multiplier/addend/override field allows:
+  - clearing to empty without snapping to 0 mid-type,
+  - typing a leading `-` or `.`,
+  - recomputing forecast only on valid parse (empty = treated as 0 for math, but display stays empty).
+- Apply to: starting balance, income multiplier, income addend, one-off amounts, recurring override amounts, new-recurring monthly amount.
 
-## Recurring generator
+### 3. Semantic clarifications
+- **Override = 0 vs disable**: if override equals 0, auto-mark as disabled (single code path); don't double-count.
+- **Override equal to original**: do NOT set `hasScenario` on affected months.
+- **New recurring with end < start**: block save with inline validation message; contribute 0 months if somehow present.
+- **New recurring start in the past**: clamp start to the first forecast month.
 
-Server function `runRecurring` runs on app load (from dashboard loader). For each active recurring item, inserts missing transactions from `last_generated_on` up to today (idempotent via `last_generated_on` update).
+### 4. Explain button state
+- Disable the button while the mutation is pending; show a spinner.
+- On error, keep the previous explanation visible and surface the error via toast (already wired) instead of clearing the card.
+- Debounce is unnecessary since the button disables during pending.
 
-## Routes (all under `_authenticated/`)
+### 5. Empty-state + legend copy
+- Before first click, the AI card shows a one-line hint: "Click to get a plain-language walk-through of the months above."
+- Legend: add a short line clarifying that "Cumulative = starting balance + running sum of net" and that scenario-affected months carry the badge.
 
-- `/` — Dashboard: month totals (income, spending, net), per-category progress vs. limit, top categories, recent transactions, "Get AI advice" button.
-- `/transactions` — Add expense/income form + filterable list (this week / month / all), delete.
-- `/budget` — Manage categories (name, monthly limit) and recurring items (CRUD).
-- `/advice` — AI recommendations page (also embeddable card on dashboard).
+## Out of scope
 
-Public `/auth` route for login.
+- Locale switching (en-EG stays).
+- Forwarding `X-Lovable-AIG-Run-ID` to the browser (internal debugging only; revisit if support needs it).
+- Persistence, sharing, or saving scenarios.
+- Retry/backoff on AI errors (terminal errors stay terminal; user can click again).
 
-## AI recommendations
+## Technical notes
 
-- `src/lib/ai-gateway.server.ts` — Lovable AI Gateway provider helper.
-- `src/lib/advice.functions.ts` — `getBudgetAdvice` server fn (auth-protected):
-  - Loads current-month transactions, categories with limits, active recurring items.
-  - Sends compact summary (per-category spend vs. limit, days left, recurring load, net) to `google/gemini-3-flash-preview` via `generateText`.
-  - Returns 3–5 concrete, EGP-context tips as markdown.
-- Client calls with `useServerFn` + `useMutation`; renders with `react-markdown`.
-- Handles 429 (rate limit) and 402 (credits) with clear messages.
-- Ensures `LOVABLE_API_KEY` via `ai_gateway--create`.
+- `NumberField` is a controlled input holding a string; parent gets `number | null` via `onChange`. Forecast `useMemo` treats `null` as 0.
+- Zod schema mirrors the existing `ExplainInput` type; use `.max()` on arrays and `.trim().max(60)` on names.
+- Override-equals-original check: compare against the source recurring item's amount before setting `hasScenario`.
+- No new dependencies.
 
-## UI
+## Files touched
 
-- Shared header with nav (Dashboard, Transactions, Budget, Advice, Sign out).
-- shadcn components: Card, Button, Input, Select, Progress, Tabs, Table, Dialog, Toast.
-- `formatEGP()` helper using `Intl.NumberFormat('en-EG', { style: 'currency', currency: 'EGP' })`.
-- Real head metadata per route; replace placeholder homepage.
-- Sign-out follows hygiene pattern (cancelQueries → clear → signOut → navigate to /auth).
+- `src/routes/simulate.tsx` — NumberField, semantic fixes, button state, copy.
+- `src/lib/simulate.functions.ts` — Zod validation, payload caps, name trimming.
 
-## Out of scope (v1)
+## Acceptance criteria
 
-- Multi-currency, savings goals, daily limits, bank imports, receipts, sharing.
+- Every numeric field can be cleared to empty and retyped without flicker or 0-snap.
+- Malformed `explainForecast` payloads are rejected server-side with a readable error.
+- Override to 0 behaves identically to disable in the forecast.
+- New recurring with end < start cannot be saved.
+- Explain button disables during request; previous explanation preserved on error.
+- No regressions to the 12-row forecast, partial badge, or cumulative anchor.

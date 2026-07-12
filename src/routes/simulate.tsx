@@ -139,9 +139,13 @@ function SimulatePage() {
       for (const r of recurring) {
         if (!r.active) continue;
         const ov = recOverrides[r.id] ?? {};
-        if (ov.disabled) { hasScenario = true; continue; }
-        const base = ov.amount ?? Number(r.amount);
-        if (ov.amount !== undefined) hasScenario = true;
+        const original = Number(r.amount);
+        // Override to 0 behaves the same as disable
+        const effectivelyDisabled = ov.disabled || ov.amount === 0;
+        if (effectivelyDisabled) { hasScenario = true; continue; }
+        const base = ov.amount ?? original;
+        // Only flag as scenario when the override actually differs from base
+        if (ov.amount !== undefined && ov.amount !== original) hasScenario = true;
         const monthly =
           r.frequency === "monthly"
             ? base
@@ -152,8 +156,11 @@ function SimulatePage() {
 
       // New hypothetical recurring
       for (const nr of newRecurring) {
+        // Skip invalid windows (end before start)
+        if (nr.endOffset != null && nr.endOffset < nr.startOffset) continue;
         if (i < nr.startOffset) continue;
         if (nr.endOffset != null && i > nr.endOffset) continue;
+        if (nr.monthlyAmount === 0) continue;
         hasScenario = true;
         if (nr.kind === "income") recIncome += nr.monthlyAmount;
         else recExpense += nr.monthlyAmount;
@@ -211,10 +218,12 @@ function SimulatePage() {
   }, [forecast]);
 
   const explainFn = useServerFn(explainForecast);
+  const [lastExplanation, setLastExplanation] = useState<string | null>(null);
   const explainM = useMutation({
     mutationFn: (payload: ExplainInput) => explainFn({ data: payload }),
     onSuccess: (res) => {
-      if (!res.ok) toast.error(res.error);
+      if (res.ok) setLastExplanation(res.explanation);
+      else toast.error(res.error);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -539,8 +548,11 @@ function SimulatePage() {
               Simulate a new subscription, salary, or bill without saving it.
             </p>
           )}
-          {newRecurring.map((nr) => (
-            <div key={nr.id} className="grid grid-cols-12 items-end gap-2">
+          {newRecurring.map((nr) => {
+            const invalidWindow = nr.endOffset != null && nr.endOffset < nr.startOffset;
+            return (
+            <div key={nr.id} className="space-y-1">
+            <div className="grid grid-cols-12 items-end gap-2">
               <div className="col-span-2">
                 <Select
                   value={nr.kind}
@@ -622,7 +634,14 @@ function SimulatePage() {
                 <Trash2 className="h-4 w-4" />
               </Button>
             </div>
-          ))}
+            {invalidWindow && (
+              <p className="pl-1 text-xs text-rose-600">
+                End month is before start — this item won't contribute to the forecast. Adjust the dates or set End to Ongoing.
+              </p>
+            )}
+            </div>
+            );
+          })}
         </CardContent>
       </Card>
 
@@ -637,14 +656,13 @@ function SimulatePage() {
           </Button>
         </CardHeader>
         <CardContent>
-          {explainM.data?.ok ? (
+          {lastExplanation ? (
             <div className="prose prose-sm max-w-none dark:prose-invert">
-              <ReactMarkdown>{explainM.data.explanation}</ReactMarkdown>
+              <ReactMarkdown>{lastExplanation}</ReactMarkdown>
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">
-              Get an AI narrative of your 12-month forecast — which months are tight, which windfalls
-              offset them, and what to plan for.
+              Click <span className="font-medium text-foreground">Explain this forecast</span> to get a plain-language walk-through of the months above — which are tight, which windfalls offset them, and what to plan for.
             </p>
           )}
         </CardContent>
