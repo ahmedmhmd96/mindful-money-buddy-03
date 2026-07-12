@@ -1,64 +1,55 @@
-## Goal
+# Product Document (PRD) — PDF Export
 
-Close the gaps surfaced by the test-it review on `/simulate` without changing the feature's shape. Ephemeral behavior, 12-month horizon, and AI explanation stay as-is.
+Generate a stakeholder-facing PRD as a polished PDF saved to `/mnt/documents/` and delivered via a presentation-artifact tag. No app code changes.
 
-## Scope
+## Source of truth
 
-UI + a small server-fn hardening pass. No schema changes, no persistence.
+Feature summary derived from existing app routes and server functions:
 
-## Changes
+- **Dashboard** (`/`) — monthly income/spend/net, projected totals, daily spending limit until cycle end, category budgets, recurring commitments, income by source, goals progress, recent transactions.
+- **Transactions** (`/transactions`) — add/edit income & expense entries in EGP with category, source, note, date.
+- **Budget** (`/budget`) — manage categories (name, color, monthly limit), recurring items (monthly/weekly, day-of-month/week, expense/income), cycle end day.
+- **Goals** (`/goals`) — savings targets and per-category caps with on-track/over-cap indicators.
+- **Simulate** (`/simulate`) — 12-month cash-flow forecast with what-if scenarios (starting balance, income multiplier/addend, one-offs, recurring overrides, new hypothetical recurring, disabled items) plus AI-written natural-language explanation of the forecast.
+- **Advice** (`/advice`) — on-demand AI budgeting tips based on the current month.
+- **Settings** (`/settings`) — account & cycle configuration.
+- **Auth & security** — email/Google sign-in, per-user data isolation via row-level security.
+- **AI** — powered by Lovable AI Gateway (advice + forecast explanation).
 
-### 1. Server function hardening (`src/lib/simulate.functions.ts`)
-- Add a Zod schema for `ExplainInput` and validate inside `inputValidator` (replace the `as` cast). Reject malformed payloads with a clear error.
-- Cap payload size: max 24 one-offs, 24 overrides, 12 new-recurring, 12 disabled. Trim names to 60 chars before building the prompt.
-- Keep the existing 429 / 402 / generic error mapping.
+## Document structure (3–6 pages)
 
-### 2. Numeric input UX (all scenario fields)
-- Extract a small `NumberField` wrapper (or shared `onChange` helper) so every amount/multiplier/addend/override field allows:
-  - clearing to empty without snapping to 0 mid-type,
-  - typing a leading `-` or `.`,
-  - recomputing forecast only on valid parse (empty = treated as 0 for math, but display stays empty).
-- Apply to: starting balance, income multiplier, income addend, one-off amounts, recurring override amounts, new-recurring monthly amount.
+1. **Cover** — product name, one-line value prop, date, audience note.
+2. **Overview** — what the product is, who it's for (EGP-based personal budgeters), core value.
+3. **Key features** — grouped sections with short descriptions:
+   - Dashboard & projections
+   - Transactions
+   - Categories & budgets
+   - Recurring commitments
+   - Goals (savings + category caps)
+   - 12-month simulator with AI explanation
+   - AI budgeting advice
+   - Accounts, cycle & settings
+4. **User journeys** — 2–3 short narratives (new user onboarding, monthly check-in, planning a big expense via simulator).
+5. **Differentiators** — cycle-aware daily limit, projection blending posted + expected recurring, natural-language AI forecast explanation, EGP-first.
+6. **Roadmap / not in scope** — brief note on future opportunities (multi-currency, exports, shared budgets) — kept short since audience is external.
 
-### 3. Semantic clarifications
-- **Override = 0 vs disable**: if override equals 0, auto-mark as disabled (single code path); don't double-count.
-- **Override equal to original**: do NOT set `hasScenario` on affected months.
-- **New recurring with end < start**: block save with inline validation message; contribute 0 months if somehow present.
-- **New recurring start in the past**: clamp start to the first forecast month.
+## Design
 
-### 4. Explain button state
-- Disable the button while the mutation is pending; show a spinner.
-- On error, keep the previous explanation visible and surface the error via toast (already wired) instead of clearing the card.
-- Debounce is unnecessary since the button disables during pending.
+- Format: US Letter PDF, 1" margins.
+- Typography: DejaVu Sans (Unicode-safe), 11pt body, 22pt title, 14pt section headers.
+- Accent color: emerald green (matches app's positive/net tone).
+- Section header underline bar; simple, clean, no clip-art.
 
-### 5. Empty-state + legend copy
-- Before first click, the AI card shows a one-line hint: "Click to get a plain-language walk-through of the months above."
-- Legend: add a short line clarifying that "Cumulative = starting balance + running sum of net" and that scenario-affected months carry the badge.
+## Technical implementation
+
+- Python + ReportLab Platypus (`SimpleDocTemplate`, `Paragraph`, `Spacer`, `PageBreak`).
+- Register DejaVu Sans via fontconfig for correct glyph rendering.
+- Write to `/mnt/documents/product-overview.pdf`.
+- Mandatory QA: render pages to JPG with `pdftoppm -r 150`, view every page, fix overflow/overlap/contrast issues, re-render until clean.
+- Deliver with `<presentation-artifact path="product-overview.pdf" mime_type="application/pdf">`.
 
 ## Out of scope
 
-- Locale switching (en-EG stays).
-- Forwarding `X-Lovable-AIG-Run-ID` to the browser (internal debugging only; revisit if support needs it).
-- Persistence, sharing, or saving scenarios.
-- Retry/backoff on AI errors (terminal errors stay terminal; user can click again).
-
-## Technical notes
-
-- `NumberField` is a controlled input holding a string; parent gets `number | null` via `onChange`. Forecast `useMemo` treats `null` as 0.
-- Zod schema mirrors the existing `ExplainInput` type; use `.max()` on arrays and `.trim().max(60)` on names.
-- Override-equals-original check: compare against the source recurring item's amount before setting `hasScenario`.
-- No new dependencies.
-
-## Files touched
-
-- `src/routes/simulate.tsx` — NumberField, semantic fixes, button state, copy.
-- `src/lib/simulate.functions.ts` — Zod validation, payload caps, name trimming.
-
-## Acceptance criteria
-
-- Every numeric field can be cleared to empty and retyped without flicker or 0-snap.
-- Malformed `explainForecast` payloads are rejected server-side with a readable error.
-- Override to 0 behaves identically to disable in the forecast.
-- New recurring with end < start cannot be saved.
-- Explain button disables during request; previous explanation preserved on error.
-- No regressions to the 12-row forecast, partial badge, or cumulative anchor.
+- No changes to app code, routes, or database.
+- No diagrams/screenshots embedded (text-only PRD unless you request visuals).
+- No marketing copywriting beyond straightforward feature descriptions.
