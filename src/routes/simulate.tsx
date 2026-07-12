@@ -139,9 +139,13 @@ function SimulatePage() {
       for (const r of recurring) {
         if (!r.active) continue;
         const ov = recOverrides[r.id] ?? {};
-        if (ov.disabled) { hasScenario = true; continue; }
-        const base = ov.amount ?? Number(r.amount);
-        if (ov.amount !== undefined) hasScenario = true;
+        const original = Number(r.amount);
+        // Override to 0 behaves the same as disable
+        const effectivelyDisabled = ov.disabled || ov.amount === 0;
+        if (effectivelyDisabled) { hasScenario = true; continue; }
+        const base = ov.amount ?? original;
+        // Only flag as scenario when the override actually differs from base
+        if (ov.amount !== undefined && ov.amount !== original) hasScenario = true;
         const monthly =
           r.frequency === "monthly"
             ? base
@@ -152,8 +156,11 @@ function SimulatePage() {
 
       // New hypothetical recurring
       for (const nr of newRecurring) {
+        // Skip invalid windows (end before start)
+        if (nr.endOffset != null && nr.endOffset < nr.startOffset) continue;
         if (i < nr.startOffset) continue;
         if (nr.endOffset != null && i > nr.endOffset) continue;
+        if (nr.monthlyAmount === 0) continue;
         hasScenario = true;
         if (nr.kind === "income") recIncome += nr.monthlyAmount;
         else recExpense += nr.monthlyAmount;
