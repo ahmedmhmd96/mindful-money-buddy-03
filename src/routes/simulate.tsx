@@ -218,10 +218,12 @@ function SimulatePage() {
   }, [forecast]);
 
   const explainFn = useServerFn(explainForecast);
+  const [lastExplanation, setLastExplanation] = useState<string | null>(null);
   const explainM = useMutation({
     mutationFn: (payload: ExplainInput) => explainFn({ data: payload }),
     onSuccess: (res) => {
-      if (!res.ok) toast.error(res.error);
+      if (res.ok) setLastExplanation(res.explanation);
+      else toast.error(res.error);
     },
     onError: (e: Error) => toast.error(e.message),
   });
