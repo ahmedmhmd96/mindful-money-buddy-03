@@ -1,55 +1,31 @@
-# Product Document (PRD) — PDF Export
+## Product Hunt launch copy
 
-Generate a stakeholder-facing PRD as a polished PDF saved to `/mnt/documents/` and delivered via a presentation-artifact tag. No app code changes.
+Deliver directly in chat — no file changes. Punchy & bold tone, EGP-first personal budgeting angle, with the cycle-aware daily limit and AI simulator as the hero hooks.
 
-## Source of truth
+### What I'll produce
 
-Feature summary derived from existing app routes and server functions:
+1. **Tagline** — 3 options, each ≤ 60 characters. Benefit-led, no filler.
+2. **Short description** — 3 options, each ≤ 260 characters. Lead with the "what", follow with 2–3 concrete features (daily limit until cycle end, 12-month AI simulator, recurring + goals), close with who it's for.
 
-- **Dashboard** (`/`) — monthly income/spend/net, projected totals, daily spending limit until cycle end, category budgets, recurring commitments, income by source, goals progress, recent transactions.
-- **Transactions** (`/transactions`) — add/edit income & expense entries in EGP with category, source, note, date.
-- **Budget** (`/budget`) — manage categories (name, color, monthly limit), recurring items (monthly/weekly, day-of-month/week, expense/income), cycle end day.
-- **Goals** (`/goals`) — savings targets and per-category caps with on-track/over-cap indicators.
-- **Simulate** (`/simulate`) — 12-month cash-flow forecast with what-if scenarios (starting balance, income multiplier/addend, one-offs, recurring overrides, new hypothetical recurring, disabled items) plus AI-written natural-language explanation of the forecast.
-- **Advice** (`/advice`) — on-demand AI budgeting tips based on the current month.
-- **Settings** (`/settings`) — account & cycle configuration.
-- **Auth & security** — email/Google sign-in, per-user data isolation via row-level security.
-- **AI** — powered by Lovable AI Gateway (advice + forecast explanation).
+### Angles I'll draw from
 
-## Document structure (3–6 pages)
+- Cycle-aware daily spending limit (not just monthly totals)
+- 12-month what-if simulator with plain-English AI explanation
+- Recurring commitments + category caps + savings goals in one view
+- EGP-native, built for people who get paid on a cycle, not the 1st
 
-1. **Cover** — product name, one-line value prop, date, audience note.
-2. **Overview** — what the product is, who it's for (EGP-based personal budgeters), core value.
-3. **Key features** — grouped sections with short descriptions:
-   - Dashboard & projections
-   - Transactions
-   - Categories & budgets
-   - Recurring commitments
-   - Goals (savings + category caps)
-   - 12-month simulator with AI explanation
-   - AI budgeting advice
-   - Accounts, cycle & settings
-4. **User journeys** — 2–3 short narratives (new user onboarding, monthly check-in, planning a big expense via simulator).
-5. **Differentiators** — cycle-aware daily limit, projection blending posted + expected recurring, natural-language AI forecast explanation, EGP-first.
-6. **Roadmap / not in scope** — brief note on future opportunities (multi-currency, exports, shared budgets) — kept short since audience is external.
+### Format in reply
 
-## Design
+```
+Tagline options
+1. ...
+2. ...
+3. ...
 
-- Format: US Letter PDF, 1" margins.
-- Typography: DejaVu Sans (Unicode-safe), 11pt body, 22pt title, 14pt section headers.
-- Accent color: emerald green (matches app's positive/net tone).
-- Section header underline bar; simple, clean, no clip-art.
+Short description options
+1. ...
+2. ...
+3. ...
+```
 
-## Technical implementation
-
-- Python + ReportLab Platypus (`SimpleDocTemplate`, `Paragraph`, `Spacer`, `PageBreak`).
-- Register DejaVu Sans via fontconfig for correct glyph rendering.
-- Write to `/mnt/documents/product-overview.pdf`.
-- Mandatory QA: render pages to JPG with `pdftoppm -r 150`, view every page, fix overflow/overlap/contrast issues, re-render until clean.
-- Deliver with `<presentation-artifact path="product-overview.pdf" mime_type="application/pdf">`.
-
-## Out of scope
-
-- No changes to app code, routes, or database.
-- No diagrams/screenshots embedded (text-only PRD unless you request visuals).
-- No marketing copywriting beyond straightforward feature descriptions.
+No PRD edits, no new files.
