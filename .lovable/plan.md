@@ -1,12 +1,14 @@
-## Product Hunt maker's first comment
+Deliver in chat only — no file changes. Write a shoutout for Lovable in the style of the screenshot's "What made you choose Lovable over the alternatives?" field.
 
-Deliver in chat only. Punchy & bold tone, ~80 words, single short paragraph, personal-story angle, closing with a feedback ask.
+### Tone & shape
+- First-person, punchy, specific. ~60–90 words.
+- Concrete reasons, not marketing fluff.
+- Reference the actual build experience (AI fullstack, backend + frontend in one flow, speed to shippable app).
 
-### Beats
-- Hook: I kept overspending mid-cycle even with a "budget."
-- Insight: monthly totals lie — what matters is what's safe to spend *today*.
-- Build: cycle-aware daily limit that folds in recurring bills, category caps, and savings goals; 12-month AI simulator for the big "what ifs."
-- Close: ask for honest feedback on the daily-limit idea.
+### Angles to pull from
+- Shipped a real budgeting app (cycle-aware limits, 12-month AI simulator) end-to-end — frontend, DB, auth, AI — without stitching services.
+- Other tools stop at UI or need manual backend glue; Lovable handled Cloud, RLS, server functions, and the AI gateway in the same conversation.
+- Iteration speed: describe → preview → refine, with the app running live.
 
 ### Output
-2 variants of the comment so you can pick the one that sounds most like you. No file changes.
+2 variants of the shoutout paragraph so you can pick the one that fits your voice. Copy-paste ready for the form.
