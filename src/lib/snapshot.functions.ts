@@ -170,7 +170,10 @@ export const updateSnapshot = createServerFn({ method: "POST" })
     if (data.cycle_end_day !== undefined) patch.cycle_end_day = data.cycle_end_day;
     if (data.mark_onboarded) patch.onboarded_at = new Date().toISOString();
 
-    const { error } = await supabase.from("user_settings").upsert(patch, { onConflict: "user_id" });
+    const { error } = await supabase
+      .from("user_settings")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .upsert(patch as any, { onConflict: "user_id" });
     if (error) throw error;
     return { ok: true };
   });
