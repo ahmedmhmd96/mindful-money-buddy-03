@@ -55,6 +55,9 @@ function Dashboard() {
 
   const [balanceOpen, setBalanceOpen] = useState(false);
   const [balanceInput, setBalanceInput] = useState("");
+  const [delayFor, setDelayFor] = useState<{ id: string; name: string } | null>(null);
+  const tomorrowISO = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+  const [delayDate, setDelayDate] = useState<string>(tomorrowISO);
 
   const correctM = useMutation({
     mutationFn: (v: number) => correctFn({ data: { new_balance: v } }),
