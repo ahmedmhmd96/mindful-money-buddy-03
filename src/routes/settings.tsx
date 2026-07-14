@@ -24,6 +24,15 @@ import {
   getSettings,
   updateSettings,
 } from "@/lib/budget.functions";
+import { getSnapshot, updateSnapshot } from "@/lib/snapshot.functions";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useEffect } from "react";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({ meta: [{ title: "Settings — My Budget" }] }),
@@ -62,9 +71,101 @@ function SettingsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const snapFn = useServerFn(getSnapshot);
+  const updSnapFn = useServerFn(updateSnapshot);
+  const snapQ = useQuery({ queryKey: ["snapshot"], queryFn: () => snapFn({ data: undefined }) });
+  const s = snapQ.data?.settings;
+
+  const [bal, setBal] = useState("");
+  const [incAmt, setIncAmt] = useState("");
+  const [incDate, setIncDate] = useState("");
+  const [incLabel, setIncLabel] = useState("");
+  const [flexAmt, setFlexAmt] = useState("");
+  const [flexFreq, setFlexFreq] = useState<"daily" | "weekly" | "monthly">("daily");
+  useEffect(() => {
+    if (!s) return;
+    setBal(s.current_balance != null ? String(s.current_balance) : "");
+    setIncAmt(s.next_income_amount != null ? String(s.next_income_amount) : "");
+    setIncDate(s.next_income_date ?? "");
+    setIncLabel(s.next_income_label ?? "");
+    setFlexAmt(s.flex_spend_amount != null ? String(s.flex_spend_amount) : "");
+    if (s.flex_spend_frequency) setFlexFreq(s.flex_spend_frequency as typeof flexFreq);
+  }, [s]);
+
+  const saveSnapM = useMutation({
+    mutationFn: (d: Parameters<typeof updSnapFn>[0]["data"]) => updSnapFn({ data: d }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["snapshot"] });
+      toast.success("Saved. Safe daily spend recalculated.");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   return (
     <AppShell>
       <h1 className="mb-4 text-2xl font-semibold">Settings</h1>
+
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Financial snapshot</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label>Current available balance (EGP)</Label>
+            <Input type="number" value={bal} onChange={(e) => setBal(e.target.value)} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Everyday spending estimate (EGP)</Label>
+            <div className="flex gap-2">
+              <Input
+                type="number"
+                value={flexAmt}
+                onChange={(e) => setFlexAmt(e.target.value)}
+                className="flex-1"
+              />
+              <Select value={flexFreq} onValueChange={(v) => setFlexFreq(v as typeof flexFreq)}>
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="daily">per day</SelectItem>
+                  <SelectItem value="weekly">per week</SelectItem>
+                  <SelectItem value="monthly">per month</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Next expected income (EGP)</Label>
+            <Input type="number" value={incAmt} onChange={(e) => setIncAmt(e.target.value)} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Expected date</Label>
+            <Input type="date" value={incDate} onChange={(e) => setIncDate(e.target.value)} />
+          </div>
+          <div className="space-y-1.5 md:col-span-2">
+            <Label>Income label</Label>
+            <Input value={incLabel} onChange={(e) => setIncLabel(e.target.value)} placeholder="Salary" />
+          </div>
+          <div className="md:col-span-2">
+            <Button
+              onClick={() =>
+                saveSnapM.mutate({
+                  current_balance: bal === "" ? null : Number(bal),
+                  next_income_amount: incAmt === "" ? null : Number(incAmt),
+                  next_income_date: incDate || null,
+                  next_income_label: incLabel || null,
+                  flex_spend_amount: flexAmt === "" ? null : Number(flexAmt),
+                  flex_spend_frequency: flexAmt === "" ? null : flexFreq,
+                })
+              }
+              disabled={saveSnapM.isPending}
+            >
+              Save snapshot
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card className="mb-6">
         <CardHeader>

@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as TransactionsRouteImport } from './routes/transactions'
 import { Route as SimulateRouteImport } from './routes/simulate'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as GoalsRouteImport } from './routes/goals'
 import { Route as BudgetRouteImport } from './routes/budget'
 import { Route as AdviceRouteImport } from './routes/advice'
@@ -30,6 +31,11 @@ const SimulateRoute = SimulateRouteImport.update({
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GoalsRoute = GoalsRouteImport.update({
@@ -58,6 +64,7 @@ export interface FileRoutesByFullPath {
   '/advice': typeof AdviceRoute
   '/budget': typeof BudgetRoute
   '/goals': typeof GoalsRoute
+  '/onboarding': typeof OnboardingRoute
   '/settings': typeof SettingsRoute
   '/simulate': typeof SimulateRoute
   '/transactions': typeof TransactionsRoute
@@ -67,6 +74,7 @@ export interface FileRoutesByTo {
   '/advice': typeof AdviceRoute
   '/budget': typeof BudgetRoute
   '/goals': typeof GoalsRoute
+  '/onboarding': typeof OnboardingRoute
   '/settings': typeof SettingsRoute
   '/simulate': typeof SimulateRoute
   '/transactions': typeof TransactionsRoute
@@ -77,6 +85,7 @@ export interface FileRoutesById {
   '/advice': typeof AdviceRoute
   '/budget': typeof BudgetRoute
   '/goals': typeof GoalsRoute
+  '/onboarding': typeof OnboardingRoute
   '/settings': typeof SettingsRoute
   '/simulate': typeof SimulateRoute
   '/transactions': typeof TransactionsRoute
@@ -88,6 +97,7 @@ export interface FileRouteTypes {
     | '/advice'
     | '/budget'
     | '/goals'
+    | '/onboarding'
     | '/settings'
     | '/simulate'
     | '/transactions'
@@ -97,6 +107,7 @@ export interface FileRouteTypes {
     | '/advice'
     | '/budget'
     | '/goals'
+    | '/onboarding'
     | '/settings'
     | '/simulate'
     | '/transactions'
@@ -106,6 +117,7 @@ export interface FileRouteTypes {
     | '/advice'
     | '/budget'
     | '/goals'
+    | '/onboarding'
     | '/settings'
     | '/simulate'
     | '/transactions'
@@ -116,6 +128,7 @@ export interface RootRouteChildren {
   AdviceRoute: typeof AdviceRoute
   BudgetRoute: typeof BudgetRoute
   GoalsRoute: typeof GoalsRoute
+  OnboardingRoute: typeof OnboardingRoute
   SettingsRoute: typeof SettingsRoute
   SimulateRoute: typeof SimulateRoute
   TransactionsRoute: typeof TransactionsRoute
@@ -142,6 +155,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/goals': {
@@ -180,6 +200,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdviceRoute: AdviceRoute,
   BudgetRoute: BudgetRoute,
   GoalsRoute: GoalsRoute,
+  OnboardingRoute: OnboardingRoute,
   SettingsRoute: SettingsRoute,
   SimulateRoute: SimulateRoute,
   TransactionsRoute: TransactionsRoute,
@@ -187,13 +208,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

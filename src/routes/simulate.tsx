@@ -29,6 +29,8 @@ import {
   listTransactions,
 } from "@/lib/budget.functions";
 import { explainForecast, type ExplainInput } from "@/lib/simulate.functions";
+import { getSnapshot } from "@/lib/snapshot.functions";
+import { AccuracyBadge } from "@/components/AccuracyBadge";
 import { formatEGP, monthRange } from "@/lib/format";
 
 export const Route = createFileRoute("/simulate")({
@@ -79,6 +81,7 @@ function SimulatePage() {
   const listCatsFn = useServerFn(listCategories);
   const listRecFn = useServerFn(listRecurring);
   const listTxFn = useServerFn(listTransactions);
+  const snapFn = useServerFn(getSnapshot);
 
   const { start, end } = useMemo(() => monthRange(), []);
 
@@ -88,11 +91,21 @@ function SimulatePage() {
     queryKey: ["transactions", "month", start],
     queryFn: () => listTxFn({ data: { from: start, to: end } }),
   });
+  const snapQ = useQuery({ queryKey: ["snapshot"], queryFn: () => snapFn({ data: undefined }) });
 
   // Adjustments
   const [incomeMultiplier, setIncomeMultiplier] = useState<number>(100);
   const [incomeAddend, setIncomeAddend] = useState<number>(0);
   const [startingBalance, setStartingBalance] = useState<number>(0);
+  const [baselineApplied, setBaselineApplied] = useState(false);
+  useEffect(() => {
+    if (baselineApplied) return;
+    const b = snapQ.data?.settings?.current_balance;
+    if (b != null) {
+      setStartingBalance(Number(b));
+      setBaselineApplied(true);
+    }
+  }, [snapQ.data, baselineApplied]);
   const [oneOffs, setOneOffs] = useState<OneOff[]>([]);
   const [recOverrides, setRecOverrides] = useState<Record<string, RecOverride>>({});
   const [newRecurring, setNewRecurring] = useState<NewRecurring[]>([]);
@@ -319,6 +332,21 @@ function SimulatePage() {
           <RotateCcw className="mr-1.5 h-4 w-4" /> Reset scenario
         </Button>
       </div>
+
+      {snapQ.data?.settings && (
+        <div className="mb-4 rounded-md border bg-muted/30 p-3 text-sm">
+          <div className="mb-1 flex items-center gap-2 font-medium">
+            Baseline from your snapshot <AccuracyBadge kind="actual" />
+          </div>
+          <div className="text-xs text-muted-foreground">
+            Starting balance {formatEGP(Number(snapQ.data.settings.current_balance ?? 0))}
+            {snapQ.data.settings.next_income_amount != null && (
+              <> · next income {formatEGP(Number(snapQ.data.settings.next_income_amount))} on {snapQ.data.settings.next_income_date}</>
+            )}
+            . Scenarios below are hypothetical — <AccuracyBadge kind="scenario" className="ml-1" /> — and do not touch real data.
+          </div>
+        </div>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Projected income (12 mo)" value={formatEGP(totals.income)} tone="text-emerald-600" />

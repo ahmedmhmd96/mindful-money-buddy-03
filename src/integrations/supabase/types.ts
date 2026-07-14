@@ -95,6 +95,7 @@ export type Database = {
           kind: string
           last_generated_on: string | null
           name: string
+          template: string | null
           user_id: string
         }
         Insert: {
@@ -109,6 +110,7 @@ export type Database = {
           kind: string
           last_generated_on?: string | null
           name: string
+          template?: string | null
           user_id: string
         }
         Update: {
@@ -123,6 +125,7 @@ export type Database = {
           kind?: string
           last_generated_on?: string | null
           name?: string
+          template?: string | null
           user_id?: string
         }
         Relationships: [
@@ -135,8 +138,134 @@ export type Database = {
           },
         ]
       }
+      recurring_occurrences: {
+        Row: {
+          actual_amount: number | null
+          created_at: string
+          due_date: string
+          expected_amount: number
+          id: string
+          recurring_id: string
+          status: string
+          transaction_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          actual_amount?: number | null
+          created_at?: string
+          due_date: string
+          expected_amount: number
+          id?: string
+          recurring_id: string
+          status?: string
+          transaction_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          actual_amount?: number | null
+          created_at?: string
+          due_date?: string
+          expected_amount?: number
+          id?: string
+          recurring_id?: string
+          status?: string
+          transaction_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_occurrences_recurring_id_fkey"
+            columns: ["recurring_id"]
+            isOneToOne: false
+            referencedRelation: "recurring_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_occurrences_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scenario_items: {
+        Row: {
+          amount: number
+          created_at: string
+          duration_months: number | null
+          id: string
+          kind: string
+          note: string | null
+          one_off: boolean
+          scenario_id: string
+          start_date: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          duration_months?: number | null
+          id?: string
+          kind: string
+          note?: string | null
+          one_off?: boolean
+          scenario_id: string
+          start_date: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          duration_months?: number | null
+          id?: string
+          kind?: string
+          note?: string | null
+          one_off?: boolean
+          scenario_id?: string
+          start_date?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scenario_items_scenario_id_fkey"
+            columns: ["scenario_id"]
+            isOneToOne: false
+            referencedRelation: "scenarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scenarios: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       transactions: {
         Row: {
+          accuracy_type: string
           amount: number
           category_id: string | null
           created_at: string
@@ -144,10 +273,13 @@ export type Database = {
           kind: string
           note: string | null
           occurred_on: string
+          period_end: string | null
+          period_start: string | null
           source: string | null
           user_id: string
         }
         Insert: {
+          accuracy_type?: string
           amount: number
           category_id?: string | null
           created_at?: string
@@ -155,10 +287,13 @@ export type Database = {
           kind: string
           note?: string | null
           occurred_on?: string
+          period_end?: string | null
+          period_start?: string | null
           source?: string | null
           user_id: string
         }
         Update: {
+          accuracy_type?: string
           amount?: number
           category_id?: string | null
           created_at?: string
@@ -166,6 +301,8 @@ export type Database = {
           kind?: string
           note?: string | null
           occurred_on?: string
+          period_end?: string | null
+          period_start?: string | null
           source?: string | null
           user_id?: string
         }
@@ -181,17 +318,41 @@ export type Database = {
       }
       user_settings: {
         Row: {
+          balance_updated_at: string | null
+          current_balance: number | null
           cycle_end_day: number
+          flex_spend_amount: number | null
+          flex_spend_frequency: string | null
+          next_income_amount: number | null
+          next_income_date: string | null
+          next_income_label: string | null
+          onboarded_at: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          balance_updated_at?: string | null
+          current_balance?: number | null
           cycle_end_day?: number
+          flex_spend_amount?: number | null
+          flex_spend_frequency?: string | null
+          next_income_amount?: number | null
+          next_income_date?: string | null
+          next_income_label?: string | null
+          onboarded_at?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          balance_updated_at?: string | null
+          current_balance?: number | null
           cycle_end_day?: number
+          flex_spend_amount?: number | null
+          flex_spend_frequency?: string | null
+          next_income_amount?: number | null
+          next_income_date?: string | null
+          next_income_label?: string | null
+          onboarded_at?: string | null
           updated_at?: string
           user_id?: string
         }
