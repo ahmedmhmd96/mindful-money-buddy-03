@@ -95,6 +95,7 @@ export type Database = {
           kind: string
           last_generated_on: string | null
           name: string
+          priority: string
           template: string | null
           user_id: string
         }
@@ -110,6 +111,7 @@ export type Database = {
           kind: string
           last_generated_on?: string | null
           name: string
+          priority?: string
           template?: string | null
           user_id: string
         }
@@ -125,6 +127,7 @@ export type Database = {
           kind?: string
           last_generated_on?: string | null
           name?: string
+          priority?: string
           template?: string | null
           user_id?: string
         }
@@ -146,6 +149,7 @@ export type Database = {
           expected_amount: number
           id: string
           recurring_id: string
+          reflected_in_balance: boolean
           status: string
           transaction_id: string | null
           updated_at: string
@@ -158,6 +162,7 @@ export type Database = {
           expected_amount: number
           id?: string
           recurring_id: string
+          reflected_in_balance?: boolean
           status?: string
           transaction_id?: string | null
           updated_at?: string
@@ -170,6 +175,7 @@ export type Database = {
           expected_amount?: number
           id?: string
           recurring_id?: string
+          reflected_in_balance?: boolean
           status?: string
           transaction_id?: string | null
           updated_at?: string
@@ -323,10 +329,12 @@ export type Database = {
           cycle_end_day: number
           flex_spend_amount: number | null
           flex_spend_frequency: string | null
+          include_income_day: boolean
           next_income_amount: number | null
           next_income_date: string | null
           next_income_label: string | null
           onboarded_at: string | null
+          safety_buffer_amount: number | null
           updated_at: string
           user_id: string
         }
@@ -336,10 +344,12 @@ export type Database = {
           cycle_end_day?: number
           flex_spend_amount?: number | null
           flex_spend_frequency?: string | null
+          include_income_day?: boolean
           next_income_amount?: number | null
           next_income_date?: string | null
           next_income_label?: string | null
           onboarded_at?: string | null
+          safety_buffer_amount?: number | null
           updated_at?: string
           user_id: string
         }
@@ -349,10 +359,12 @@ export type Database = {
           cycle_end_day?: number
           flex_spend_amount?: number | null
           flex_spend_frequency?: string | null
+          include_income_day?: boolean
           next_income_amount?: number | null
           next_income_date?: string | null
           next_income_label?: string | null
           onboarded_at?: string | null
+          safety_buffer_amount?: number | null
           updated_at?: string
           user_id?: string
         }
