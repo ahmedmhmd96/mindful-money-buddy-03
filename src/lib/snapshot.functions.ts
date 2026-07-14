@@ -2,6 +2,11 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { computeSafeToSpend, type OpenCommitment, type SafeToSpendResult } from "./safe-to-spend";
+import {
+  calculateFinancialPosition,
+  type CommitmentInput,
+  type FinancialPosition,
+} from "./financial-position";
 
 // ---------- helpers ----------
 
@@ -105,38 +110,107 @@ export const getSnapshot = createServerFn({ method: "GET" })
       }
     }
 
-    // Load open occurrences (not skipped).
+    // Load ALL occurrences within the visible horizon (including skipped for
+    // UI; the calc engine filters them out itself).
     const { data: occs } = await supabase
       .from("recurring_occurrences")
-      .select("*, recurring_items(name, template, kind)")
-      .neq("status", "skipped")
+      .select("*, recurring_items(name, template, kind, priority, category_id)")
       .order("due_date", { ascending: true });
 
-    const openCommitments: OpenCommitment[] = (occs ?? []).map((o) => ({
-      id: o.id,
-      due_date: o.due_date,
-      expected_amount: Number(o.expected_amount),
-      actual_amount: o.actual_amount != null ? Number(o.actual_amount) : null,
-      status: o.status as OpenCommitment["status"],
-      name: (o as { recurring_items?: { name?: string } }).recurring_items?.name,
-    }));
+    const commitments: CommitmentInput[] = (occs ?? []).map((o) => {
+      const rec = (o as {
+        recurring_items?: { name?: string; priority?: string };
+      }).recurring_items;
+      return {
+        id: o.id,
+        due_date: o.due_date,
+        expected_amount: Number(o.expected_amount),
+        actual_amount: o.actual_amount != null ? Number(o.actual_amount) : null,
+        status: o.status as CommitmentInput["status"],
+        priority: (rec?.priority as CommitmentInput["priority"]) ?? "mandatory",
+        reflected_in_balance: Boolean((o as { reflected_in_balance?: boolean }).reflected_in_balance),
+        name: rec?.name,
+      };
+    });
 
-    const safe = computeSafeToSpend({
+    // Essential actuals inside the window: non-commitment expenses w/ accuracy
+    // "exact" or "daily_total", between today and window end. Approximates
+    // Story G's "log actual food, reduces the reserve" without needing
+    // category-level tags for MVP.
+    const windowEndISO = (() => {
+      if (!settings?.next_income_date) return null;
+      const d = new Date(settings.next_income_date + "T00:00:00");
+      d.setDate(d.getDate() - 1);
+      return d.toISOString().slice(0, 10);
+    })();
+    let essentialActualsInWindow = 0;
+    if (windowEndISO) {
+      const todayISO = today.toISOString().slice(0, 10);
+      const { data: txs } = await supabase
+        .from("transactions")
+        .select("amount, kind, accuracy_type, note")
+        .eq("user_id", userId)
+        .eq("kind", "expense")
+        .gte("occurred_on", todayISO)
+        .lte("occurred_on", windowEndISO);
+      for (const t of txs ?? []) {
+        const note = (t as { note?: string | null }).note ?? "";
+        if (note.startsWith("Commitment:")) continue;
+        if (t.accuracy_type === "balance_correction") continue;
+        essentialActualsInWindow += Number(t.amount);
+      }
+    }
+
+    const positionInput = {
       currentBalance: settings?.current_balance != null ? Number(settings.current_balance) : null,
       balanceUpdatedAt: settings?.balance_updated_at ?? null,
       nextIncomeDate: settings?.next_income_date ?? null,
       nextIncomeAmount:
         settings?.next_income_amount != null ? Number(settings.next_income_amount) : null,
-      flexAmount:
+      nextIncomeConfirmed: false as const,
+      includeIncomeDay: Boolean((settings as { include_income_day?: boolean } | null)?.include_income_day),
+      essentialAmount:
         settings?.flex_spend_amount != null ? Number(settings.flex_spend_amount) : null,
-      flexFrequency: (settings?.flex_spend_frequency as SafeToSpendResult extends object
+      essentialFrequency:
+        (settings?.flex_spend_frequency as "daily" | "weekly" | "monthly" | null) ?? null,
+      essentialUpdatedAt: settings?.updated_at ?? null,
+      essentialActualsInWindow,
+      safetyBuffer:
+        (settings as { safety_buffer_amount?: number | null } | null)?.safety_buffer_amount != null
+          ? Number((settings as { safety_buffer_amount?: number | null }).safety_buffer_amount)
+          : null,
+      commitments,
+    };
+
+    const position: FinancialPosition = calculateFinancialPosition(positionInput);
+
+    // Back-compat: `safe` retained for older UI paths. New code should read
+    // `position` exclusively.
+    const openForLegacy: OpenCommitment[] = commitments
+      .filter((c) => c.status !== "skipped")
+      .map((c) => ({
+        id: c.id,
+        due_date: c.due_date,
+        expected_amount: c.expected_amount,
+        actual_amount: c.actual_amount,
+        status: c.status,
+        name: c.name,
+      }));
+    const safe = computeSafeToSpend({
+      currentBalance: positionInput.currentBalance,
+      balanceUpdatedAt: positionInput.balanceUpdatedAt,
+      nextIncomeDate: positionInput.nextIncomeDate,
+      nextIncomeAmount: positionInput.nextIncomeAmount,
+      flexAmount: positionInput.essentialAmount,
+      flexFrequency: (positionInput.essentialFrequency as SafeToSpendResult extends object
         ? "daily" | "weekly" | "monthly" | null
         : never) ?? null,
-      openCommitments,
+      openCommitments: openForLegacy,
     });
 
-    return { settings, occurrences: occs ?? [], safe };
+    return { settings, occurrences: occs ?? [], safe, position };
   });
+
 
 // ---------- update snapshot fields ----------
 
@@ -298,6 +372,8 @@ export const confirmOccurrence = createServerFn({ method: "POST" })
       action: "paid" | "delayed" | "skipped" | "changed";
       actual_amount?: number;
       new_due_date?: string;
+      /** If true, do not deduct from balance — payment already reflected. */
+      reflected?: boolean;
     }) =>
       z
         .object({
@@ -305,6 +381,7 @@ export const confirmOccurrence = createServerFn({ method: "POST" })
           action: z.enum(["paid", "delayed", "skipped", "changed"]),
           actual_amount: z.number().positive().optional(),
           new_due_date: z.string().optional(),
+          reflected: z.boolean().optional(),
         })
         .parse(d),
   )
@@ -334,11 +411,13 @@ export const confirmOccurrence = createServerFn({ method: "POST" })
       return { ok: true };
     }
 
-    // paid / changed → create tx and adjust balance
+    // paid / changed → log tx (audit) and optionally deduct balance
     const amount = data.action === "changed" ? (data.actual_amount ?? 0) : Number(occ.expected_amount);
     if (amount <= 0) throw new Error("Amount is required");
     const rec = (occ as { recurring_items?: { name?: string; category_id?: string | null; kind?: string } })
       .recurring_items;
+    const reflected = data.reflected === true;
+
     const { data: tx, error: txErr } = await supabase
       .from("transactions")
       .insert({
@@ -346,7 +425,7 @@ export const confirmOccurrence = createServerFn({ method: "POST" })
         kind: "expense",
         amount,
         category_id: rec?.category_id ?? null,
-        note: `Commitment: ${rec?.name ?? "Recurring"}`,
+        note: `Commitment: ${rec?.name ?? "Recurring"}${reflected ? " (already reflected)" : ""}`,
         occurred_on: occ.due_date,
         accuracy_type: "exact",
       })
@@ -360,31 +439,44 @@ export const confirmOccurrence = createServerFn({ method: "POST" })
         status: "confirmed",
         actual_amount: amount,
         transaction_id: tx?.id ?? null,
+        reflected_in_balance: reflected,
       })
       .eq("id", data.id);
 
-    // Adjust balance.
-    const { data: s } = await supabase
-      .from("user_settings")
-      .select("current_balance")
-      .eq("user_id", userId)
-      .maybeSingle();
-    if (s?.current_balance != null) {
-      const next = Number(s.current_balance) - amount;
-      await supabase
+    if (!reflected) {
+      const { data: s } = await supabase
         .from("user_settings")
-        .update({ current_balance: next, balance_updated_at: new Date().toISOString() })
-        .eq("user_id", userId);
+        .select("current_balance")
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (s?.current_balance != null) {
+        const next = Number(s.current_balance) - amount;
+        await supabase
+          .from("user_settings")
+          .update({ current_balance: next, balance_updated_at: new Date().toISOString() })
+          .eq("user_id", userId);
+      }
     }
-    return { ok: true };
+    return { ok: true, reflected };
   });
 
 // ---------- confirm expected income ----------
 
 export const confirmIncome = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { actual_amount?: number }) =>
-    z.object({ actual_amount: z.number().positive().optional() }).parse(d),
+  .inputValidator(
+    (d: {
+      action?: "arrived" | "changed" | "not_yet" | "skipped";
+      actual_amount?: number;
+      new_date?: string;
+    }) =>
+      z
+        .object({
+          action: z.enum(["arrived", "changed", "not_yet", "skipped"]).optional(),
+          actual_amount: z.number().positive().optional(),
+          new_date: z.string().optional(),
+        })
+        .parse(d),
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
@@ -394,6 +486,32 @@ export const confirmIncome = createServerFn({ method: "POST" })
       .eq("user_id", userId)
       .maybeSingle();
     if (!s?.next_income_amount) throw new Error("No expected income to confirm");
+
+    const action = data.action ?? (data.actual_amount != null ? "changed" : "arrived");
+
+    if (action === "not_yet") {
+      if (!data.new_date) throw new Error("Pick a revised expected date");
+      await supabase
+        .from("user_settings")
+        .update({ next_income_date: data.new_date, updated_at: new Date().toISOString() })
+        .eq("user_id", userId);
+      return { ok: true, action };
+    }
+
+    if (action === "skipped") {
+      await supabase
+        .from("user_settings")
+        .update({
+          next_income_amount: null,
+          next_income_date: null,
+          next_income_label: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("user_id", userId);
+      return { ok: true, action };
+    }
+
+    // arrived / changed → add to balance + create audit tx, then clear expected
     const amount = data.actual_amount ?? Number(s.next_income_amount);
     await supabase.from("transactions").insert({
       user_id: userId,
@@ -402,9 +520,9 @@ export const confirmIncome = createServerFn({ method: "POST" })
       source: s.next_income_label ?? "Income",
       occurred_on: s.next_income_date ?? isoDate(new Date()),
       accuracy_type: "exact",
+      note: action === "changed" ? "Income (amount changed)" : "Income confirmed",
     });
-    const newBal =
-      s.current_balance != null ? Number(s.current_balance) + amount : amount;
+    const newBal = s.current_balance != null ? Number(s.current_balance) + amount : amount;
     await supabase
       .from("user_settings")
       .update({
@@ -415,7 +533,7 @@ export const confirmIncome = createServerFn({ method: "POST" })
         next_income_label: null,
       })
       .eq("user_id", userId);
-    return { ok: true };
+    return { ok: true, action, amount };
   });
 
 // ---------- create commitment from onboarding template ----------
