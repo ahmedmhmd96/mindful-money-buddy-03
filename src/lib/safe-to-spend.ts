@@ -82,12 +82,12 @@ export function computeSafeToSpend(input: SafeToSpendInput): SafeToSpendResult {
     confidence = "low";
     reasons.push(`Balance last updated ${Number.isFinite(daysSince) ? daysSince : "?"} days ago`);
   } else if (daysSince > 3) {
-    confidence = confidence === "low" ? "low" : "medium";
+    if (confidence !== "low") confidence = "medium";
     reasons.push(`Balance updated ${daysSince} days ago`);
   }
 
   if (!input.nextIncomeDate) {
-    confidence = confidence === "low" ? "low" : "medium";
+    if (confidence !== "low") confidence = "medium";
     reasons.push("No expected income date set");
   }
   if (!input.flexAmount) {
