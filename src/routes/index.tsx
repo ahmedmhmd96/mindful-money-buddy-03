@@ -224,9 +224,14 @@ function Dashboard() {
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() =>
-                              confirmOccM.mutate({ id: o.id, action: "delayed" })
-                            }
+                            onClick={() => {
+                              const name = (o as { recurring_items?: { name?: string } }).recurring_items?.name ?? "Commitment";
+                              const base = o.due_date < tomorrowISO ? tomorrowISO : o.due_date;
+                              const d = new Date(base + "T00:00:00");
+                              d.setDate(d.getDate() + 7);
+                              setDelayDate(d.toISOString().slice(0, 10));
+                              setDelayFor({ id: o.id, name });
+                            }}
                           >
                             Delay
                           </Button>
