@@ -333,6 +333,21 @@ function SimulatePage() {
         </Button>
       </div>
 
+      {snapQ.data?.settings && (
+        <div className="mb-4 rounded-md border bg-muted/30 p-3 text-sm">
+          <div className="mb-1 flex items-center gap-2 font-medium">
+            Baseline from your snapshot <AccuracyBadge kind="actual" />
+          </div>
+          <div className="text-xs text-muted-foreground">
+            Starting balance {formatEGP(Number(snapQ.data.settings.current_balance ?? 0))}
+            {snapQ.data.settings.next_income_amount != null && (
+              <> · next income {formatEGP(Number(snapQ.data.settings.next_income_amount))} on {snapQ.data.settings.next_income_date}</>
+            )}
+            . Scenarios below are hypothetical — <AccuracyBadge kind="scenario" className="ml-1" /> — and do not touch real data.
+          </div>
+        </div>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Projected income (12 mo)" value={formatEGP(totals.income)} tone="text-emerald-600" />
         <StatCard label="Projected spend (12 mo)" value={formatEGP(totals.expense)} tone="text-rose-600" />
