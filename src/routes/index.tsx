@@ -322,6 +322,47 @@ function Dashboard() {
         </div>
       </div>
 
+      <Dialog open={!!delayFor} onOpenChange={(o) => !o && setDelayFor(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delay {delayFor?.name}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Pick the new due date. We'll move this commitment and recalculate your safe daily spend.
+          </p>
+          <div className="space-y-1.5">
+            <Label htmlFor="dd">New due date</Label>
+            <Input
+              id="dd"
+              type="date"
+              min={tomorrowISO}
+              value={delayDate}
+              onChange={(e) => setDelayDate(e.target.value)}
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setDelayFor(null)}>Cancel</Button>
+            <Button
+              onClick={() => {
+                if (!delayFor) return;
+                if (!delayDate || delayDate < tomorrowISO) {
+                  toast.error("Pick a future date");
+                  return;
+                }
+                confirmOccM.mutate(
+                  { id: delayFor.id, action: "delayed", new_due_date: delayDate },
+                  { onSuccess: () => setDelayFor(null) },
+                );
+              }}
+              disabled={confirmOccM.isPending}
+            >
+              Delay to this date
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={balanceOpen} onOpenChange={setBalanceOpen}>
         <DialogContent>
           <DialogHeader>
