@@ -297,12 +297,14 @@ export const confirmOccurrence = createServerFn({ method: "POST" })
       id: string;
       action: "paid" | "delayed" | "skipped" | "changed";
       actual_amount?: number;
+      new_due_date?: string;
     }) =>
       z
         .object({
           id: z.string().uuid(),
           action: z.enum(["paid", "delayed", "skipped", "changed"]),
           actual_amount: z.number().positive().optional(),
+          new_due_date: z.string().optional(),
         })
         .parse(d),
   )
@@ -317,9 +319,10 @@ export const confirmOccurrence = createServerFn({ method: "POST" })
     if (!occ) throw new Error("Commitment not found");
 
     if (data.action === "delayed") {
+      if (!data.new_due_date) throw new Error("A new due date is required to delay");
       await supabase
         .from("recurring_occurrences")
-        .update({ status: "delayed" })
+        .update({ status: "delayed", due_date: data.new_due_date })
         .eq("id", data.id);
       return { ok: true };
     }

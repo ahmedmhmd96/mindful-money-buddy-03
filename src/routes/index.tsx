@@ -55,6 +55,9 @@ function Dashboard() {
 
   const [balanceOpen, setBalanceOpen] = useState(false);
   const [balanceInput, setBalanceInput] = useState("");
+  const [delayFor, setDelayFor] = useState<{ id: string; name: string } | null>(null);
+  const tomorrowISO = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+  const [delayDate, setDelayDate] = useState<string>(tomorrowISO);
 
   const correctM = useMutation({
     mutationFn: (v: number) => correctFn({ data: { new_balance: v } }),
@@ -221,9 +224,14 @@ function Dashboard() {
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() =>
-                              confirmOccM.mutate({ id: o.id, action: "delayed" })
-                            }
+                            onClick={() => {
+                              const name = (o as { recurring_items?: { name?: string } }).recurring_items?.name ?? "Commitment";
+                              const base = o.due_date < tomorrowISO ? tomorrowISO : o.due_date;
+                              const d = new Date(base + "T00:00:00");
+                              d.setDate(d.getDate() + 7);
+                              setDelayDate(d.toISOString().slice(0, 10));
+                              setDelayFor({ id: o.id, name });
+                            }}
                           >
                             Delay
                           </Button>
@@ -313,6 +321,47 @@ function Dashboard() {
           </Card>
         </div>
       </div>
+
+      <Dialog open={!!delayFor} onOpenChange={(o) => !o && setDelayFor(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delay {delayFor?.name}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Pick the new due date. We'll move this commitment and recalculate your safe daily spend.
+          </p>
+          <div className="space-y-1.5">
+            <Label htmlFor="dd">New due date</Label>
+            <Input
+              id="dd"
+              type="date"
+              min={tomorrowISO}
+              value={delayDate}
+              onChange={(e) => setDelayDate(e.target.value)}
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setDelayFor(null)}>Cancel</Button>
+            <Button
+              onClick={() => {
+                if (!delayFor) return;
+                if (!delayDate || delayDate < tomorrowISO) {
+                  toast.error("Pick a future date");
+                  return;
+                }
+                confirmOccM.mutate(
+                  { id: delayFor.id, action: "delayed", new_due_date: delayDate },
+                  { onSuccess: () => setDelayFor(null) },
+                );
+              }}
+              disabled={confirmOccM.isPending}
+            >
+              Delay to this date
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={balanceOpen} onOpenChange={setBalanceOpen}>
         <DialogContent>
