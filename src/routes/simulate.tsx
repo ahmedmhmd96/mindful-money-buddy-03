@@ -29,6 +29,8 @@ import {
   listTransactions,
 } from "@/lib/budget.functions";
 import { explainForecast, type ExplainInput } from "@/lib/simulate.functions";
+import { getSnapshot } from "@/lib/snapshot.functions";
+import { AccuracyBadge } from "@/components/AccuracyBadge";
 import { formatEGP, monthRange } from "@/lib/format";
 
 export const Route = createFileRoute("/simulate")({
@@ -79,6 +81,7 @@ function SimulatePage() {
   const listCatsFn = useServerFn(listCategories);
   const listRecFn = useServerFn(listRecurring);
   const listTxFn = useServerFn(listTransactions);
+  const snapFn = useServerFn(getSnapshot);
 
   const { start, end } = useMemo(() => monthRange(), []);
 
@@ -88,11 +91,21 @@ function SimulatePage() {
     queryKey: ["transactions", "month", start],
     queryFn: () => listTxFn({ data: { from: start, to: end } }),
   });
+  const snapQ = useQuery({ queryKey: ["snapshot"], queryFn: () => snapFn({ data: undefined }) });
 
   // Adjustments
   const [incomeMultiplier, setIncomeMultiplier] = useState<number>(100);
   const [incomeAddend, setIncomeAddend] = useState<number>(0);
   const [startingBalance, setStartingBalance] = useState<number>(0);
+  const [baselineApplied, setBaselineApplied] = useState(false);
+  useEffect(() => {
+    if (baselineApplied) return;
+    const b = snapQ.data?.settings?.current_balance;
+    if (b != null) {
+      setStartingBalance(Number(b));
+      setBaselineApplied(true);
+    }
+  }, [snapQ.data, baselineApplied]);
   const [oneOffs, setOneOffs] = useState<OneOff[]>([]);
   const [recOverrides, setRecOverrides] = useState<Record<string, RecOverride>>({});
   const [newRecurring, setNewRecurring] = useState<NewRecurring[]>([]);
