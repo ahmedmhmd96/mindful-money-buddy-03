@@ -1,0 +1,162 @@
+{
+  "version": 1,
+  "sdk_version": "0.23.0",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://owprxxnbjoyewsmzawis.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "mindful-money-buddy-mcp",
+      "version": "0.1.0",
+      "title": "Mindful Money Buddy"
+    },
+    "tools": [
+      {
+        "name": "list_transactions",
+        "title": "List transactions",
+        "description": "List the signed-in user's recent transactions (income and expenses), newest first. Amounts are in Egyptian Pounds (EGP).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "limit": {
+              "default": 50,
+              "description": "Maximum rows to return.",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            },
+            "kind": {
+              "description": "Filter by transaction kind.",
+              "type": "string",
+              "enum": [
+                "income",
+                "expense"
+              ]
+            },
+            "since": {
+              "description": "ISO date (YYYY-MM-DD). Only return transactions on or after this date.",
+              "type": "string"
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "add_transaction",
+        "title": "Add transaction",
+        "description": "Record a new income or expense transaction for the signed-in user. Amount is in Egyptian Pounds (EGP).",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "income",
+                "expense"
+              ],
+              "description": "Whether the transaction is income or expense."
+            },
+            "amount": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "description": "Amount in EGP (positive number)."
+            },
+            "occurred_on": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "description": "Date the transaction occurred (YYYY-MM-DD)."
+            },
+            "note": {
+              "description": "Optional short note.",
+              "type": "string",
+              "maxLength": 500
+            },
+            "category_id": {
+              "description": "Optional category UUID.",
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          "required": [
+            "kind",
+            "amount",
+            "occurred_on"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_categories",
+        "title": "List budget categories",
+        "description": "List the signed-in user's budget categories with their monthly EGP limits.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_recurring_commitments",
+        "title": "List recurring commitments",
+        "description": "List the signed-in user's recurring income and expense commitments (e.g. salary, rent, subscriptions). Amounts in EGP.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "active_only": {
+              "default": true,
+              "description": "Only return active commitments.",
+              "type": "boolean"
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_goals",
+        "title": "List savings goals",
+        "description": "List the signed-in user's savings goals with target and current EGP amounts.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
