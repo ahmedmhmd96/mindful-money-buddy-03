@@ -54,6 +54,7 @@ function TransactionsPage() {
   const snapFn = useServerFn(getSnapshot);
 
   const [filter, setFilter] = useState<Filter>("month");
+  const [ocrOpen, setOcrOpen] = useState(false);
   const range = useMemo<{ from?: string; to?: string }>(() => {
     if (filter === "all") return {};
     if (filter === "month") {
