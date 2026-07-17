@@ -72,10 +72,6 @@ export function OcrIntakeSheet({
 }) {
   const qc = useQueryClient();
   const listCatsFn = useServerFn(listCategories);
-  const extractReceiptFn = useServerFn(extractReceipt);
-  const extractSmsFn = useServerFn(extractSmsScreenshot);
-  const extractStmtFn = useServerFn(extractStatement);
-  const logFn = useServerFn(logQuickTransaction);
 
   const [mode, setMode] = useState<Mode>(defaultMode);
   const catsQ = useQuery({
