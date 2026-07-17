@@ -25,7 +25,9 @@ import {
 import type { CommitmentInput } from "@/lib/financial-position";
 import { SafeToSpendCard } from "@/components/SafeToSpendCard";
 import { AccuracyBadge } from "@/components/AccuracyBadge";
+import { OcrIntakeSheet } from "@/components/OcrIntakeSheet";
 import { formatEGP } from "@/lib/format";
+import { ScanLine } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({ meta: [{ title: "Safe to spend — My Budget" }] }),
