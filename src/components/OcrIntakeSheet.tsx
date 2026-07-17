@@ -570,18 +570,16 @@ type Row = {
 };
 
 function StatementFlow({
-  extractFn,
   cats,
   onSaved,
-  logFn,
   onDone,
 }: {
-  extractFn: ReturnType<typeof useServerFn<typeof extractStatement>>;
   cats: Cat[];
   onSaved: () => void;
-  logFn: ReturnType<typeof useServerFn<typeof logQuickTransaction>>;
   onDone: () => void;
 }) {
+  const extractFn = useServerFn(extractStatement);
+  const logFn = useServerFn(logQuickTransaction);
   const [file, setFile] = useState<File | null>(null);
   const [rows, setRows] = useState<Row[] | null>(null);
   const [currency, setCurrency] = useState("");
