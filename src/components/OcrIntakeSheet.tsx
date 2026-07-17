@@ -428,7 +428,7 @@ function SmsFlow({
   const [note, setNote] = useState("");
   const [currency, setCurrency] = useState("");
 
-  useMemo(() => {
+  useEffect(() => {
     if (!result) return;
     setKind(result.direction ?? "expense");
     setAmount(result.amount != null ? String(result.amount) : "");
