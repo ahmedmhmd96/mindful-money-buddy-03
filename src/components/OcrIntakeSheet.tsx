@@ -218,20 +218,18 @@ function guessCategoryId(guess: string | null | undefined, cats: Cat[]): string 
 }
 
 function ReceiptFlow({
-  extractFn,
   cats,
   onSaved,
-  logFn,
   onDone,
   acceptPdf,
 }: {
-  extractFn: ReturnType<typeof useServerFn<typeof extractReceipt>>;
   cats: Cat[];
   onSaved: () => void;
-  logFn: ReturnType<typeof useServerFn<typeof logQuickTransaction>>;
   onDone: () => void;
   acceptPdf?: boolean;
 }) {
+  const extractFn = useServerFn(extractReceipt);
+  const logFn = useServerFn(logQuickTransaction);
   const [file, setFile] = useState<File | null>(null);
   const [result, setResult] = useState<Awaited<ReturnType<typeof extractReceipt>> | null>(null);
 
