@@ -184,10 +184,17 @@ function Dashboard() {
 
   return (
     <AppShell>
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold">Your money right now</h1>
-        <p className="text-sm text-muted-foreground">All amounts in EGP.</p>
+      <div className="mb-6 flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold">Your money right now</h1>
+          <p className="text-sm text-muted-foreground">All amounts in EGP.</p>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => setOcrOpen(true)}>
+          <ScanLine className="mr-2 h-4 w-4" /> Scan
+        </Button>
       </div>
+
+      <OcrIntakeSheet open={ocrOpen} onOpenChange={setOcrOpen} />
 
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
