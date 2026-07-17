@@ -106,10 +106,8 @@ export function OcrIntakeSheet({
 
           <TabsContent value="receipt" className="mt-4">
             <ReceiptFlow
-              extractFn={extractReceiptFn}
               cats={cats}
               onSaved={invalidateAll}
-              logFn={logFn}
               onDone={() => onOpenChange(false)}
               acceptPdf
             />
@@ -117,20 +115,16 @@ export function OcrIntakeSheet({
 
           <TabsContent value="sms" className="mt-4">
             <SmsFlow
-              extractFn={extractSmsFn}
               cats={cats}
               onSaved={invalidateAll}
-              logFn={logFn}
               onDone={() => onOpenChange(false)}
             />
           </TabsContent>
 
           <TabsContent value="statement" className="mt-4">
             <StatementFlow
-              extractFn={extractStmtFn}
               cats={cats}
               onSaved={invalidateAll}
-              logFn={logFn}
               onDone={() => onOpenChange(false)}
             />
           </TabsContent>
