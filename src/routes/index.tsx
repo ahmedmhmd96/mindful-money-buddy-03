@@ -63,6 +63,7 @@ function Dashboard() {
   }, [snapQ.data, settings, navigate]);
 
   const [balanceOpen, setBalanceOpen] = useState(false);
+  const [ocrOpen, setOcrOpen] = useState(false);
   const [balanceInput, setBalanceInput] = useState("");
 
   const tomorrowISO = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
