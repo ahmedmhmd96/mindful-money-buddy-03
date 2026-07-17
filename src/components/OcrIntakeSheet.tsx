@@ -261,7 +261,7 @@ function ReceiptFlow({
   const [currency, setCurrency] = useState<string>("");
 
   // hydrate form when result arrives
-  useMemo(() => {
+  useEffect(() => {
     if (!result) return;
     setAmount(result.amount != null ? String(result.amount) : "");
     setDate(result.occurred_on ?? today());
