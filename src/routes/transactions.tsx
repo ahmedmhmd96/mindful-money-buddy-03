@@ -21,7 +21,8 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { toast } from "sonner";
-import { Trash2, ChevronDown } from "lucide-react";
+import { Trash2, ChevronDown, ScanLine } from "lucide-react";
+import { OcrIntakeSheet } from "@/components/OcrIntakeSheet";
 import {
   deleteTransaction,
   listCategories,
@@ -53,6 +54,7 @@ function TransactionsPage() {
   const snapFn = useServerFn(getSnapshot);
 
   const [filter, setFilter] = useState<Filter>("month");
+  const [ocrOpen, setOcrOpen] = useState(false);
   const range = useMemo<{ from?: string; to?: string }>(() => {
     if (filter === "all") return {};
     if (filter === "month") {
@@ -204,7 +206,15 @@ function TransactionsPage() {
 
   return (
     <AppShell>
-      <h1 className="mb-4 text-2xl font-semibold">Transactions</h1>
+      <div className="mb-4 flex items-center justify-between gap-2">
+        <h1 className="text-2xl font-semibold">Transactions</h1>
+        <Button variant="outline" size="sm" onClick={() => setOcrOpen(true)}>
+          <ScanLine className="mr-2 h-4 w-4" /> Scan & import
+        </Button>
+      </div>
+
+      <OcrIntakeSheet open={ocrOpen} onOpenChange={setOcrOpen} />
+
 
       <div className="grid gap-6 lg:grid-cols-[380px_1fr]">
         <Card>
