@@ -385,18 +385,16 @@ function ReceiptFlow({
 // ---------- SMS ----------
 
 function SmsFlow({
-  extractFn,
   cats,
   onSaved,
-  logFn,
   onDone,
 }: {
-  extractFn: ReturnType<typeof useServerFn<typeof extractSmsScreenshot>>;
   cats: Cat[];
   onSaved: () => void;
-  logFn: ReturnType<typeof useServerFn<typeof logQuickTransaction>>;
   onDone: () => void;
 }) {
+  const extractFn = useServerFn(extractSmsScreenshot);
+  const logFn = useServerFn(logQuickTransaction);
   const [file, setFile] = useState<File | null>(null);
   const [result, setResult] = useState<Awaited<ReturnType<typeof extractSmsScreenshot>> | null>(
     null,
