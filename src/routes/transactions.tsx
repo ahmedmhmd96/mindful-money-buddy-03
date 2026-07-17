@@ -21,7 +21,8 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { toast } from "sonner";
-import { Trash2, ChevronDown } from "lucide-react";
+import { Trash2, ChevronDown, ScanLine } from "lucide-react";
+import { OcrIntakeSheet } from "@/components/OcrIntakeSheet";
 import {
   deleteTransaction,
   listCategories,
