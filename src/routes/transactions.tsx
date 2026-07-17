@@ -204,7 +204,15 @@ function TransactionsPage() {
 
   return (
     <AppShell>
-      <h1 className="mb-4 text-2xl font-semibold">Transactions</h1>
+      <div className="mb-4 flex items-center justify-between gap-2">
+        <h1 className="text-2xl font-semibold">Transactions</h1>
+        <Button variant="outline" size="sm" onClick={() => setOcrOpen(true)}>
+          <ScanLine className="mr-2 h-4 w-4" /> Scan & import
+        </Button>
+      </div>
+
+      <OcrIntakeSheet open={ocrOpen} onOpenChange={setOcrOpen} />
+
 
       <div className="grid gap-6 lg:grid-cols-[380px_1fr]">
         <Card>
