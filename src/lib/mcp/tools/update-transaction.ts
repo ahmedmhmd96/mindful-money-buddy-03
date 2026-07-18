@@ -24,7 +24,8 @@ export default defineTool({
       return { content: [{ type: "text", text: "No fields to update." }], isError: true };
     const { data, error } = await supabaseForUser(ctx)
       .from("transactions")
-      .update(patch)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .update(patch as any)
       .eq("id", id)
       .select()
       .maybeSingle();
