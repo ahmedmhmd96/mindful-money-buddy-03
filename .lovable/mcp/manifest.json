@@ -17,6 +17,22 @@
     },
     "tools": [
       {
+        "name": "get_safe_to_spend",
+        "title": "Get safe-to-spend position",
+        "description": "Return the signed-in user's current financial position in EGP: safe-to-spend today, daily limit, projected balance before next income, upcoming commitments, and health status.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
         "name": "list_transactions",
         "title": "List transactions",
         "description": "List the signed-in user's recent transactions (income and expenses), newest first. Amounts are in Egyptian Pounds (EGP).",
@@ -104,6 +120,97 @@
         "outputSchema": null
       },
       {
+        "name": "update_transaction",
+        "title": "Update transaction",
+        "description": "Update fields on an existing transaction owned by the signed-in user. Only provided fields change.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "description": "Transaction UUID."
+            },
+            "amount": {
+              "description": "New amount in EGP.",
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "income",
+                "expense"
+              ]
+            },
+            "occurred_on": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "note": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 500
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "category_id": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "id"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "delete_transaction",
+        "title": "Delete transaction",
+        "description": "Permanently delete one of the signed-in user's transactions by ID.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": true
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "description": "Transaction UUID."
+            }
+          },
+          "required": [
+            "id"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
         "name": "list_categories",
         "title": "List budget categories",
         "description": "List the signed-in user's budget categories with their monthly EGP limits.",
@@ -142,6 +249,120 @@
         "outputSchema": null
       },
       {
+        "name": "create_recurring_commitment",
+        "title": "Create recurring commitment",
+        "description": "Create a recurring income or expense (e.g. salary, rent, subscription) for the signed-in user. Amounts in EGP.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "income",
+                "expense"
+              ]
+            },
+            "amount": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "description": "Amount per occurrence in EGP."
+            },
+            "frequency": {
+              "type": "string",
+              "enum": [
+                "monthly",
+                "weekly"
+              ]
+            },
+            "day_of_month": {
+              "description": "Required for monthly frequency (1-31).",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 31
+            },
+            "day_of_week": {
+              "description": "Required for weekly frequency (0=Sun..6=Sat).",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 6
+            },
+            "category_id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          "required": [
+            "name",
+            "kind",
+            "amount",
+            "frequency"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "confirm_commitment",
+        "title": "Confirm / update commitment",
+        "description": "Mark a recurring commitment occurrence as paid, delayed to a new date, skipped, or paid with a changed amount. Adjusts the user's balance unless already reflected.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "description": "Recurring occurrence UUID."
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "paid",
+                "delayed",
+                "skipped",
+                "changed"
+              ]
+            },
+            "actual_amount": {
+              "description": "Required when action is 'changed'.",
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "new_due_date": {
+              "description": "Required when action is 'delayed'.",
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "reflected": {
+              "description": "If true, payment already deducted from balance — do not deduct again.",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "id",
+            "action"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
         "name": "list_goals",
         "title": "List savings goals",
         "description": "List the signed-in user's savings goals with target and current EGP amounts.",
@@ -154,6 +375,45 @@
           "$schema": "http://json-schema.org/draft-07/schema#",
           "type": "object",
           "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "create_goal",
+        "title": "Create savings goal",
+        "description": "Create a savings goal or category spending cap for the signed-in user. Amounts in EGP.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "savings",
+                "category_cap"
+              ]
+            },
+            "target_amount": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Target amount in EGP."
+            },
+            "category_id": {
+              "description": "Required when kind is category_cap.",
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          "required": [
+            "kind",
+            "target_amount"
+          ]
         },
         "outputSchema": null
       }
